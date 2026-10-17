@@ -1,5 +1,5 @@
 import { extractJson, questPrompt, QuestContentSchema, templateQuest } from '../../shared/quest';
-import { askGemma, gemmaAvailable, GEMMA_MODEL } from '../../shared/server/gemma';
+import { askGemma, gemmaAvailable, gemmaFailureReason, isGemmaUpstreamError, GEMMA_MODEL } from '../../shared/server/gemma';
 import { isHost, json, methodNotAllowed, readJson } from '../../shared/server/http';
 import type { SafeFinding } from '../../shared/types';
 
@@ -31,7 +31,8 @@ export default async (req: Request) => {
       return json(result);
     } catch (err) {
       lastError = err instanceof Error ? err.message : String(err);
+      if (isGemmaUpstreamError(lastError)) break;
     }
   }
-  return json({ source: 'template', reason: `Gemma failed validation: ${lastError}`, quest: templateQuest(finding) });
+  return json({ source: 'template', reason: gemmaFailureReason(lastError), quest: templateQuest(finding) });
 };
