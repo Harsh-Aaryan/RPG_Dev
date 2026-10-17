@@ -1,0 +1,270 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Space Grotesk", ui-sans-serif, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, sans-serif;
+  --color-obsidian: #10131f;
+  --color-ink: #070910;
+  --color-slate: #232941;
+  --color-violet: #9c78ff;
+  --color-cyan: #49dbf2;
+  --color-emerald: #61e6ac;
+  --color-coral: #ff6c79;
+  --color-sand: #f0e6d2;
+  --color-ember: #ff9b54;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--color-sand);
+  background: #070910;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 480px at 50% 0%, rgba(35, 41, 65, 0.55), transparent 62%),
+    linear-gradient(rgba(73, 219, 242, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(73, 219, 242, 0.035) 1px, transparent 1px);
+  background-size: auto, 56px 56px, 56px 56px;
+  mask-image: radial-gradient(circle at 50% 20%, black 20%, transparent 78%);
+}
+
+button,
+input {
+  font-family: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-cyan);
+  outline-offset: 3px;
+}
+
+.kicker {
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-cyan);
+}
+
+.panel,
+.frame {
+  position: relative;
+  background:
+    linear-gradient(#49dbf2, #49dbf2) left top / 16px 2px no-repeat,
+    linear-gradient(#49dbf2, #49dbf2) left top / 2px 16px no-repeat,
+    linear-gradient(#49dbf2, #49dbf2) right top / 16px 2px no-repeat,
+    linear-gradient(#49dbf2, #49dbf2) right top / 2px 16px no-repeat,
+    linear-gradient(rgba(240, 230, 210, 0.45), rgba(240, 230, 210, 0.45)) left bottom / 16px 2px no-repeat,
+    linear-gradient(rgba(240, 230, 210, 0.45), rgba(240, 230, 210, 0.45)) left bottom / 2px 16px no-repeat,
+    linear-gradient(rgba(240, 230, 210, 0.45), rgba(240, 230, 210, 0.45)) right bottom / 16px 2px no-repeat,
+    linear-gradient(rgba(240, 230, 210, 0.45), rgba(240, 230, 210, 0.45)) right bottom / 2px 16px no-repeat,
+    rgba(10, 12, 20, 0.88);
+  border: 1px solid rgba(240, 230, 210, 0.1);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+.hud-bar {
+  background: rgba(7, 9, 16, 0.72);
+  border: 1px solid rgba(240, 230, 210, 0.14);
+  backdrop-filter: blur(8px);
+  padding: 0.75rem 0.9rem 0.85rem;
+}
+
+.hud-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.75rem;
+  padding: 0.35rem 0.7rem 0.35rem 0.4rem;
+  background: rgba(7, 9, 16, 0.78);
+  border: 1px solid rgba(240, 230, 210, 0.14);
+  backdrop-filter: blur(8px);
+}
+
+.hud-mark {
+  display: grid;
+  place-items: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  background: #232941;
+  color: #49dbf2;
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.hud-log {
+  max-height: 7.5rem;
+  overflow: auto;
+  background: rgba(7, 9, 16, 0.78);
+  border: 1px solid rgba(240, 230, 210, 0.14);
+  backdrop-filter: blur(8px);
+  padding: 0.65rem 0.75rem;
+}
+
+.quest-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem;
+  background: rgba(7, 9, 16, 0.55);
+  border: 1px solid rgba(240, 230, 210, 0.1);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.quest-card:hover {
+  border-color: rgba(73, 219, 242, 0.55);
+  background: rgba(16, 19, 31, 0.9);
+}
+
+.sev {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.2rem;
+}
+
+.sev-critical {
+  color: #070910;
+  background: #ff6c79;
+}
+.sev-high {
+  color: #070910;
+  background: #ff9b54;
+}
+.sev-medium {
+  color: #070910;
+  background: #9c78ff;
+}
+.sev-low {
+  color: #070910;
+  background: #49dbf2;
+}
+
+.choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid rgba(240, 230, 210, 0.12);
+  background: rgba(7, 9, 16, 0.45);
+}
+
+.choice:has(input:checked) {
+  border-color: rgba(73, 219, 242, 0.7);
+  background: rgba(35, 41, 65, 0.55);
+}
+
+.choice:has(input:disabled) {
+  opacity: 0.55;
+}
+
+.field {
+  margin-top: 0.35rem;
+  width: 100%;
+  border: 1px solid rgba(240, 230, 210, 0.16);
+  background: #070910;
+  color: #f0e6d2;
+  padding: 0.7rem 0.8rem;
+}
+
+.hp-track {
+  height: 12px;
+  background: #121624;
+  border: 1px solid rgba(240, 230, 210, 0.28);
+  overflow: hidden;
+}
+
+.hp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff6c79, #ff9b54 55%, #61e6ac);
+  box-shadow: 0 0 12px rgba(255, 108, 121, 0.45);
+  transition: width 0.55s ease;
+}
+
+.damage-pop {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.6rem;
+  letter-spacing: 0.04em;
+  color: #ff6c79;
+  text-shadow: 0 8px 18px rgba(0, 0, 0, 0.75);
+  animation: float-up 1.15s ease forwards;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+@keyframes float-up {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-42px);
+    opacity: 0;
+  }
+}
+
+.terminal {
+  background: #090c16;
+  border: 1px solid rgba(73, 219, 242, 0.28);
+  color: #b7f6ff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.step-rail {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid rgba(240, 230, 210, 0.12);
+}
+
+.step-rail li {
+  padding: 0.9rem 1rem;
+  border-right: 1px solid rgba(240, 230, 210, 0.12);
+}
+
+.step-rail li:last-child {
+  border-right: 0;
+}
+
+@media (max-width: 760px) {
+  .step-rail {
+    grid-template-columns: 1fr 1fr;
+  }
+  .step-rail li:nth-child(odd) {
+    border-right: 1px solid rgba(240, 230, 210, 0.12);
+  }
+  .step-rail li:nth-child(1),
+  .step-rail li:nth-child(2) {
+    border-bottom: 1px solid rgba(240, 230, 210, 0.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .damage-pop,
+  .hp-fill,
+  .quest-card {
+    animation: none;
+    transition: none;
+  }
+}

@@ -1,0 +1,24 @@
+Kenney Graveyard Kit
+Author: Kenney (https://kenney.nl)
+License: CC0 1.0 Universal — public domain. Attribution is not required; it is included anyway.
+Models are unmodified glTF binaries plus the shared colormap texture.
+Downloaded from the shorepine/kenney mirror:
+https://github.com/shorepine/kenney/tree/main/3d/graveyard
+
+Files:
+- character-ghost.glb
+- character-keeper.glb
+- character-skeleton.glb
+- character-zombie.glb
+- rocks.glb
+- rocks-tall.glb
+- pillar-obelisk.glb
+- pillar-large.glb
+- pine.glb
+- lantern-glass.glb
+- crypt-small.glb
+- altar-stone.glb
+- pumpkin.glb
+- Textures/colormap.png
+
+The boss, floating island, and hit effects are original procedural geometry.

@@ -1,0 +1,76 @@
+{
+  "source": "simulated",
+  "disclaimer": "Simulated demo findings for the frontend. They are not the output of a live Strix scan.",
+  "repository": {
+    "fullName": "reporaid-demo/vault",
+    "description": "Allowlisted demo repository. This frontend does not clone or scan it."
+  },
+  "findings": [
+    {
+      "id": "finding-archive-path",
+      "title": "Untrusted path reaches archive extraction",
+      "severity": "critical",
+      "cwe": "CWE-22",
+      "safeSummary": "A file-processing path can be steered outside its intended folder by a crafted name.",
+      "remediationSummary": "Resolve the final path and reject anything outside an allowlisted directory. Cover that rule with a regression test.",
+      "affectedPath": "src/archive/extract.ts",
+      "questTitle": "Seal the Archive Gate",
+      "plainEnglishExplanation": "If a name from outside the program is joined onto a folder, the program may open a file it was never meant to touch.",
+      "learningGoal": "Keep file access inside an allowlisted directory.",
+      "hint1": "Find the function that builds a filesystem path from request data.",
+      "hint2": "Check whether the path is compared to the archive root after it is resolved.",
+      "hint3": "Resolve the path, reject anything outside the allowlisted root, and add a regression test for names that try to leave it.",
+      "mentorExplain": "The fix works because the program decides from the final location, not the raw text of the name. A name can look harmless and still point somewhere else once the path is interpreted.",
+      "testCheck": "The regression test uses a safe fixture name and asserts the extractor refuses to leave the archive root. It does not demonstrate an attack.",
+      "fixAcceptanceCriteria": [
+        "Resolved paths stay inside the allowlisted archive root",
+        "A regression test covers a name that tries to leave that root"
+      ],
+      "githubIssueNumber": 101
+    },
+    {
+      "id": "finding-query-binding",
+      "title": "Request data is concatenated into a database query",
+      "severity": "high",
+      "cwe": "CWE-89",
+      "safeSummary": "Untrusted input can become part of a database query string instead of a bound value.",
+      "remediationSummary": "Use a parameterized query and add a regression test that passes user text only as a bound parameter.",
+      "affectedPath": "src/records/search.ts",
+      "questTitle": "Seal the Unsafe Query",
+      "plainEnglishExplanation": "Text from a request is being stitched into the query itself, so the database may treat that text as instructions.",
+      "learningGoal": "Understand parameterized queries.",
+      "hint1": "Find the code that constructs the query.",
+      "hint2": "Look at how request parameters are inserted into that query.",
+      "hint3": "Replace concatenation with bound parameters, and assert the test still finds the intended record.",
+      "mentorExplain": "Bound parameters keep the data separate from the query structure. The database can still search for the text, but it will not treat that text as part of the statement.",
+      "testCheck": "The test sends ordinary search text and checks that the query uses a placeholder with a bound value. It does not include a live exploit string.",
+      "fixAcceptanceCriteria": [
+        "No untrusted string is concatenated into the query text",
+        "The regression test passes"
+      ],
+      "githubIssueNumber": 102
+    },
+    {
+      "id": "finding-missing-authz",
+      "title": "Record route skips an authorization check",
+      "severity": "medium",
+      "cwe": "CWE-862",
+      "safeSummary": "A route can return another person's record without checking that the caller is allowed to see it.",
+      "remediationSummary": "Authorize the caller against the record owner before returning data, and test both an allowed and a denied caller.",
+      "affectedPath": "src/routes/records.ts",
+      "questTitle": "Lock the Record Door",
+      "plainEnglishExplanation": "Being signed in is not the same as being allowed to open every record. This route never asks who the record belongs to.",
+      "learningGoal": "Separate authentication from authorization.",
+      "hint1": "Find the handler that loads a record by id.",
+      "hint2": "See whether it compares the caller to the record owner or an allowed role.",
+      "hint3": "Add that check before the response, and cover an allowed caller and a denied caller in tests.",
+      "mentorExplain": "Authentication proves who is calling. Authorization decides whether that caller may see this record. Both have to succeed before the data is returned.",
+      "testCheck": "The test uses two fixture users. One owns the record and receives it. The other is denied. No private data is shown in the quest.",
+      "fixAcceptanceCriteria": [
+        "The handler checks authorization before returning the record",
+        "Tests cover one allowed caller and one denied caller"
+      ],
+      "githubIssueNumber": 103
+    }
+  ]
+}
