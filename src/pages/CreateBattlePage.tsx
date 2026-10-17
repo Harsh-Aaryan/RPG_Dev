@@ -1,5 +1,5 @@
-import { Check, CircleAlert, Database, KeyRound, Lock, PlayCircle, Server, TerminalSquare } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { Check, CircleAlert, Database, KeyRound, Lock, PlayCircle, Radio, Server, Smartphone, TerminalSquare } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SeveritySigil, SwordGlyph } from '../components/art/Sigils';
 import { ScanTerminal } from '../components/battle/ScanTerminal';
@@ -8,6 +8,7 @@ import { Shell } from '../components/ui/Shell';
 import { Spinner } from '../components/ui/Spinner';
 import { generateQuest, type GeneratedQuest } from '../lib/api-client';
 import { demoFixture } from '../lib/fixture';
+import { createSharedBattle, getServerConfig } from '../lib/remote';
 import { bossLevel, bossMaxHP, bossVariant, highestSeverity, SEVERITY_STYLE } from '../lib/game-rules';
 import { useBattleStore } from '../store/useBattleStore';
 
@@ -30,6 +31,13 @@ export function CreateBattlePage() {
   const [source, setSource] = useState<Source>('replay');
   const [approved, setApproved] = useState<Set<string>>(new Set(demoFixture.findings.map((f) => f.id)));
   const [quests, setQuests] = useState<Record<string, GeneratedQuest | 'loading' | { error: string }>>({});
+
+  const [shared, setShared] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState('');
+  useEffect(() => {
+    void getServerConfig().then((c) => setShared(Boolean(c?.shared)));
+  }, []);
 
   const findings = demoFixture.findings.filter((f) => approved.has(f.id));
   const finishScan = useCallback(() => setStep('review'), []);
@@ -55,7 +63,25 @@ export function CreateBattlePage() {
   });
   const forging = step === 'generate' && !ready;
 
-  function start() {
+  async function start() {
+    if (shared) {
+      setStarting(true);
+      setStartError('');
+      try {
+        const id = await createSharedBattle({
+          name: name.trim() || 'Demo Raid',
+          hostNickname: store.nickname || 'Host',
+          findingIds: findings.map((f) => f.id),
+          quests: quests as Record<string, GeneratedQuest>,
+        });
+        navigate(`/battle/${id}`);
+      } catch (err) {
+        setStartError(err instanceof Error ? err.message : 'Could not create the shared battle');
+      } finally {
+        setStarting(false);
+      }
+      return;
+    }
     const id = store.createBattle({
       name: name.trim() || 'Demo Raid',
       fixture: { ...demoFixture, findings },
@@ -255,13 +281,34 @@ export function CreateBattlePage() {
 
             <BossPreview findings={findings} />
 
+            <p className="flex items-start gap-2 text-sm text-ink-2">
+              {shared ? (
+                <>
+                  <Radio size={15} className="mt-0.5 shrink-0 text-sage" aria-hidden />
+                  Shared battle: everyone who opens the invite fights the same boss, and HP is kept on the server.
+                </>
+              ) : (
+                <>
+                  <Smartphone size={15} className="mt-0.5 shrink-0 text-ink-3" aria-hidden />
+                  This battle will live on this device. Other devices that scan the invite get their own copy until shared battles are
+                  configured.
+                </>
+              )}
+            </p>
+            {startError && (
+              <p className="text-sm text-ember" role="alert">
+                {startError}
+              </p>
+            )}
+
             {step === 'review' ? (
               <button className="btn-primary min-h-11 px-5" disabled={!findings.length} onClick={generateAll}>
                 <Check size={18} aria-hidden /> Approve {findings.length} and forge quests
               </button>
             ) : (
-              <button className="btn-primary min-h-11 px-5" disabled={!ready} onClick={start}>
-                {forging ? <Spinner size={16} /> : <SwordGlyph size={18} />} {forging ? 'Forging quests…' : 'Start the battle'}
+              <button className="btn-primary min-h-11 px-5" disabled={!ready || starting} onClick={() => void start()}>
+                {forging || starting ? <Spinner size={16} /> : <SwordGlyph size={18} />}{' '}
+                {forging ? 'Forging quests…' : starting ? 'Summoning…' : 'Start the battle'}
               </button>
             )}
           </div>

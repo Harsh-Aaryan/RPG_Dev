@@ -3,31 +3,9 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { bossCurrentHP, bossMaxHP, damageWeight, XP_PER_DAMAGE } from '../lib/game-rules';
 import { clientId, shortId } from '../lib/id';
 import type { GeneratedQuest, IssueResult } from '../lib/api-client';
-import type {
-  BattleEvent,
-  BattleEventType,
-  FindingsFixture,
-  Participant,
-  Quest,
-  SafeFinding,
-  ScanInfo,
-  VerificationReceipt,
-} from '../lib/types';
+import type { BattleEvent, BattleEventType, BattleView, FindingsFixture, Participant, VerificationReceipt } from '../lib/types';
 
-export type Battle = {
-  id: string;
-  name: string;
-  repositoryId: string;
-  label: FindingsFixture['label'];
-  scan: ScanInfo;
-  status: 'forming' | 'active' | 'defeated';
-  createdAt: string;
-  defeatedAt?: string;
-  findings: SafeFinding[];
-  quests: Quest[];
-  participants: Participant[];
-  events: BattleEvent[];
-};
+export type Battle = BattleView;
 
 type State = {
   me: string;
@@ -54,6 +32,8 @@ type State = {
   applyVerifiedHit: (battleId: string, questId: string, receipt: VerificationReceipt) => BattleEvent | null;
   reopenQuest: (battleId: string, questId: string) => void;
   deleteBattle: (battleId: string) => void;
+  /** Replace a shared battle with the server's latest state. */
+  upsertBattle: (battle: Battle) => void;
 };
 
 function event(type: BattleEventType, text: string, extra: Partial<BattleEvent> = {}): BattleEvent {
@@ -212,6 +192,8 @@ export const useBattleStore = create<State>()(
             b.defeatedAt = undefined;
             b.events.push(event('reopen', `Fix for “${q.content.questTitle}” was invalidated; +${q.damage} HP restored`, { questId }));
           }),
+
+        upsertBattle: (battle) => set((s) => ({ battles: { ...s.battles, [battle.id]: battle } })),
 
         deleteBattle: (battleId) =>
           set((s) => {

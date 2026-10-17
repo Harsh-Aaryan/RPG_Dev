@@ -1,37 +1,25 @@
-import { extractJson, questPrompt, QuestContentSchema, templateQuest } from '../../shared/quest';
+import { knownFinding } from '../../shared/server/findings';
 import { askGemma, gemmaAvailable, GEMMA_MODEL } from '../../shared/server/gemma';
-import { isHost, json, methodNotAllowed, readJson } from '../../shared/server/http';
-import type { SafeFinding } from '../../shared/types';
+import { isHost, json, methodNotAllowed, questSignature, readJson } from '../../shared/server/http';
+import { resolveQuestContent, type QuestResult } from '../../shared/server/quest-service';
 
 // Cache per finding fingerprint for the lifetime of the function instance.
-const cache = new Map<string, unknown>();
+const cache = new Map<string, QuestResult & { signature: string }>();
 
 export default async (req: Request) => {
   if (req.method !== 'POST') return methodNotAllowed();
   if (!isHost(req)) return json({ error: 'Host token required' }, 401);
-  const body = await readJson<{ finding: SafeFinding }>(req);
-  const finding = body?.finding;
-  if (!finding?.id || !finding.title || !finding.severity) {
-    return json({ error: 'finding is required' }, 400);
-  }
+  const body = await readJson<{ findingId?: string; force?: boolean }>(req);
+  // Only findings the server already knows about become prompts; browser-sent text never does.
+  const finding = knownFinding(body?.findingId);
+  if (!finding) return json({ error: 'Unknown findingId' }, 400);
 
-  if (cache.has(finding.id)) return json(cache.get(finding.id));
+  const cached = cache.get(finding.id);
+  if (cached && !body?.force) return json(cached);
 
-  if (!gemmaAvailable()) {
-    return json({ source: 'template', reason: 'GEMINI_API_KEY not configured', quest: templateQuest(finding) });
-  }
-
-  let lastError = '';
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const text = await askGemma(questPrompt(finding));
-      const quest = QuestContentSchema.parse(extractJson(text));
-      const result = { source: 'gemma', model: GEMMA_MODEL, quest };
-      cache.set(finding.id, result);
-      return json(result);
-    } catch (err) {
-      lastError = err instanceof Error ? err.message : String(err);
-    }
-  }
-  return json({ source: 'template', reason: `Gemma failed validation: ${lastError}`, quest: templateQuest(finding) });
+  const resolved = await resolveQuestContent(finding, gemmaAvailable() ? askGemma : null, GEMMA_MODEL);
+  // Signed so a shared battle only accepts quest text (and labels) this server produced.
+  const result = { ...resolved, signature: questSignature(finding.id, resolved.source, resolved.model, resolved.quest) };
+  if (result.source === 'gemma') cache.set(finding.id, result);
+  return json(result);
 };

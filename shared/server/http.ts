@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 
 export function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -49,4 +49,38 @@ export async function readJson<T>(req: Request): Promise<T | null> {
   } catch {
     return null;
   }
+}
+
+/** Server-side HMAC secret for receipts and quest signatures. */
+export function serverSecret(): string {
+  return process.env.VERIFIER_SECRET || process.env.SCAN_WORKER_SHARED_SECRET || 'dev-only-secret';
+}
+
+/**
+ * Signature over generated quest content, so a shared battle only accepts quest
+ * text (and its Gemma/template label) that this server actually produced.
+ */
+export function questSignature(findingId: string, source: string, model: string | undefined, quest: unknown): string {
+  const digest = createHash('sha256').update(canonicalJson(quest)).digest('hex');
+  return hmac(serverSecret(), [findingId, source, model ?? '', digest].join('|'));
+}
+
+export function participantHeaders(req: Request): { id: string | null; key: string | null } {
+  return { id: req.headers.get('x-participant-id'), key: req.headers.get('x-participant-key') };
+}
+
+export function notConfigured(): Response {
+  return json({ error: 'Shared battles are not configured on this deployment (set SUPABASE_DB_URL).' }, 503);
+}
+
+/** JSON with sorted object keys, so equal values always hash the same. */
+export function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${canonicalJson((value as Record<string, unknown>)[k])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
 }

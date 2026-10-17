@@ -1,4 +1,4 @@
-import { Info, RotateCcw, Trophy } from 'lucide-react';
+import { Info, Radio, RotateCcw, Trophy } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -14,6 +14,9 @@ import { PartyList } from '../components/battle/PartyList';
 import { QuestCard } from '../components/battle/QuestCard';
 import { ScanLabel } from '../components/ui/Badges';
 import { Shell } from '../components/ui/Shell';
+import { Spinner } from '../components/ui/Spinner';
+import { useBattleActions } from '../hooks/useBattleActions';
+import { useBattleSync, useMe, type Connection } from '../hooks/useBattleSync';
 import { demoFixture } from '../lib/fixture';
 import { bossLevel, bossSizeScale, bossVariant, highestSeverity } from '../lib/game-rules';
 import { battleStats, myRole, useBattleStore } from '../store/useBattleStore';
@@ -21,9 +24,10 @@ import { battleStats, myRole, useBattleStore } from '../store/useBattleStore';
 export function BattlePage() {
   const { battleId = '' } = useParams();
   const battle = useBattleStore((s) => s.battles[battleId]);
-  const me = useBattleStore((s) => s.me);
+  const sync = useBattleSync(battleId);
+  const me = useMe(battle);
+  const actions = useBattleActions(battle, sync.refresh);
   const reducedMotion = useBattleStore((s) => s.reducedMotion);
-  const reopenQuest = useBattleStore((s) => s.reopenQuest);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -64,7 +68,8 @@ export function BattlePage() {
   }, [hits]);
 
   useEffect(() => {
-    if (!battle) return;
+    // Shared battles wait for the server's state, so a cached copy never replays old hits.
+    if (!battle || !sync.synced) return;
     const hitEvents = battle.events.filter((e) => e.type === 'hit');
     if (!seen.current) {
       seen.current = new Set(hitEvents.filter((e) => e.id !== strikeId).map((e) => e.id));
@@ -79,9 +84,13 @@ export function BattlePage() {
     if (!fresh.length) return;
     fresh.forEach((e) => seen.current!.add(e.id));
     setPending((p) => [...p, ...fresh.map((e) => ({ id: e.id, damage: e.damage ?? 0 }))]);
-  }, [battle, strikeId, navigate]);
+  }, [battle, sync.synced, strikeId, navigate]);
 
-  if (!battle) return <MissingBattle battleId={battleId} />;
+  if (!battle) {
+    if (sync.phase === 'loading') return <LoadingBattle />;
+    if (sync.phase === 'error') return <UnreachableBattle onRetry={() => void sync.refresh()} />;
+    return <MissingBattle battleId={battleId} shared={sync.shared} />;
+  }
 
   const { hp, maxHP } = battleStats(battle);
   const unresolved = battle.findings.filter((f) => battle.quests.find((q) => q.findingId === f.id)?.status !== 'verified');
@@ -96,7 +105,7 @@ export function BattlePage() {
 
   return (
     <Shell wide>
-      {!joined && <JoinModal battleId={battle.id} />}
+      {!joined && <JoinModal shared={Boolean(battle.remote)} onJoin={actions.join} />}
 
       {/* phone HUD strip */}
       <div
@@ -204,6 +213,10 @@ export function BattlePage() {
               </dd>
               <dt className="text-ink-3">Status</dt>
               <dd className={defeated ? 'text-sage' : 'text-ink-2'}>{defeated ? 'Boss defeated' : 'Battle underway'}</dd>
+              <dt className="text-ink-3">Sync</dt>
+              <dd>
+                <ConnectionLabel connection={sync.connection} />
+              </dd>
             </dl>
           </section>
 
@@ -221,7 +234,9 @@ export function BattlePage() {
             <InviteQRCode battleId={battle.id} />
             <p className="mt-4 flex gap-2 border-t border-line-soft pt-3 text-xs text-ink-3">
               <Info size={13} className="mt-0.5 shrink-0" aria-hidden />
-              Tabs on this device stay in sync. Other devices get their own copy of the demo battle until Supabase Realtime is configured.
+              {battle.remote
+                ? 'Everyone who opens this link fights the same boss and sees the same HP.'
+                : 'Tabs on this device stay in sync. Other devices get their own copy of the demo battle until shared battles are configured.'}
             </p>
           </section>
 
@@ -243,7 +258,7 @@ export function BattlePage() {
                   .filter((q) => q.status === 'verified')
                   .map((q) => (
                     <li key={q.id}>
-                      <button className="btn-danger min-h-9 w-full justify-start px-3 py-1.5 text-left text-xs" onClick={() => reopenQuest(battle.id, q.id)}>
+                      <button className="btn-danger min-h-9 w-full justify-start px-3 py-1.5 text-left text-xs" onClick={() => void actions.reopen(q.id)}>
                         <RotateCcw size={13} className="shrink-0" aria-hidden />
                         <span className="truncate">
                           Reopen “{q.content.questTitle}” (+{q.damage} HP)
@@ -260,10 +275,36 @@ export function BattlePage() {
   );
 }
 
-function JoinModal({ battleId }: { battleId: string }) {
-  const join = useBattleStore((s) => s.join);
+function ConnectionLabel({ connection }: { connection: Connection }) {
+  const label = { device: 'This device only', realtime: 'Live', polling: 'Live (refreshing every few seconds)', offline: 'Offline, showing the last copy' }[connection];
+  const tone = connection === 'realtime' || connection === 'polling' ? 'text-sage' : connection === 'offline' ? 'text-gold' : 'text-ink-2';
+  return (
+    <span className={`inline-flex items-center gap-1.5 ${tone}`}>
+      {(connection === 'realtime' || connection === 'polling') && <Radio size={13} aria-hidden />}
+      {label}
+    </span>
+  );
+}
+
+function LoadingBattle() {
+  return (
+    <Shell>
+      <div className="mx-auto mt-24 flex max-w-sm flex-col items-center text-center text-ink-2" role="status">
+        <span className="text-copper">
+          <Spinner size={28} />
+        </span>
+        <p className="mt-4 font-display text-2xl font-semibold text-ink">Opening the arena…</p>
+        <p className="mt-1 text-sm">Fetching the battle from the server.</p>
+      </div>
+    </Shell>
+  );
+}
+
+function JoinModal({ shared, onJoin }: { shared: boolean; onJoin: (nickname: string) => Promise<void> }) {
   const saved = useBattleStore((s) => s.nickname);
   const [nick, setNick] = useState(saved);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   return (
     <div className="fixed inset-0 z-40 grid place-items-center bg-abyss/80 p-4 backdrop-blur-[2px]" role="dialog" aria-modal aria-labelledby="join-title">
       <motion.form
@@ -272,29 +313,66 @@ function JoinModal({ battleId }: { battleId: string }) {
         transition={{ duration: 0.25 }}
         className="plate plate-lift w-full max-w-sm p-6"
         style={{ ['--cut' as string]: '16px', ['--fill' as string]: '#202923', ['--edge' as string]: '#415044' }}
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
-          if (nick.trim()) join(battleId, nick.trim().slice(0, 24));
+          if (!nick.trim() || busy) return;
+          setBusy(true);
+          setError('');
+          try {
+            await onJoin(nick.trim().slice(0, 24));
+          } catch (err) {
+            setError(err instanceof Error ? err.message : 'Could not join the battle');
+          } finally {
+            setBusy(false);
+          }
         }}
       >
         <Emblem size={36} />
         <h2 id="join-title" className="mt-3 font-display text-3xl font-bold text-ink">
           Join the raid
         </h2>
-        <p className="mt-1 text-sm text-ink-2">Choose the name your party will see on the roster and in the battle log.</p>
+        <p className="mt-1 text-sm text-ink-2">
+          Choose the name your party will see on the roster and in the battle log.
+          {shared && ' Everyone in this raid shares one boss.'}
+        </p>
         <label htmlFor="join-nick" className="field-label mt-5">
           Nickname
         </label>
         <input id="join-nick" className="field" autoFocus value={nick} onChange={(e) => setNick(e.target.value)} maxLength={24} placeholder="e.g. NullByteNinja" />
-        <button className="btn-primary mt-5 w-full" disabled={!nick.trim()}>
-          Join the party
+        {error && (
+          <p className="mt-3 text-sm text-ember" role="alert">
+            {error}
+          </p>
+        )}
+        <button className="btn-primary mt-5 w-full" disabled={!nick.trim() || busy}>
+          {busy && <Spinner />} Join the party
         </button>
       </motion.form>
     </div>
   );
 }
 
-function MissingBattle({ battleId }: { battleId: string }) {
+function UnreachableBattle({ onRetry }: { onRetry: () => void }) {
+  return (
+    <Shell>
+      <div className="frame mx-auto mt-16 max-w-lg p-7 text-center" role="alert">
+        <Emblem size={40} className="mx-auto" />
+        <h1 className="mt-4 font-display text-3xl font-bold text-ink">The arena didn't answer</h1>
+        <p className="mt-3 text-sm text-ink-2">The server couldn't load this battle just now. Check your connection and try again.</p>
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <button className="btn-primary" onClick={onRetry}>
+            Try again
+          </button>
+          <Link to="/" className="btn-secondary">
+            Back to raids
+          </Link>
+        </div>
+      </div>
+    </Shell>
+  );
+}
+
+function MissingBattle({ battleId, shared }: { battleId: string; shared: boolean }) {
   const createBattle = useBattleStore((s) => s.createBattle);
   const quests = useMemo(
     () => Object.fromEntries(demoFixture.findings.map((f) => [f.id, { source: 'template' as const, quest: templateQuest(f) }])),
@@ -305,19 +383,28 @@ function MissingBattle({ battleId }: { battleId: string }) {
       <div className="frame mx-auto mt-16 max-w-lg p-7 text-center">
         <Emblem size={40} className="mx-auto" />
         <h1 className="mt-4 font-display text-3xl font-bold text-ink">
-          Battle <span className="font-mono text-2xl tracking-wider">{battleId}</span> isn't on this device
+          {shared ? 'No battle with code ' : 'Battle '}
+          <span className="font-mono text-2xl tracking-wider">{battleId}</span>
+          {shared ? '' : " isn't on this device"}
         </h1>
         <p className="mt-3 text-sm text-ink-2">
-          In this MVP, battle state lives on the host's device (shared realtime needs Supabase). You can join a fresh copy of the
-          demo battle with the same code.
+          {shared
+            ? 'Check the code with your host, or start a battle of your own.'
+            : "Battles on this deployment live on the host's device. You can join a fresh copy of the demo battle with the same code."}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <button
-            className="btn-primary"
-            onClick={() => createBattle({ id: battleId, name: `Raid ${battleId}`, fixture: demoFixture, quests, asHost: false })}
-          >
-            Join the demo copy
-          </button>
+          {shared ? (
+            <Link to="/create" className="btn-primary">
+              Start a battle
+            </Link>
+          ) : (
+            <button
+              className="btn-primary"
+              onClick={() => createBattle({ id: battleId, name: `Raid ${battleId}`, fixture: demoFixture, quests, asHost: false })}
+            >
+              Join the demo copy
+            </button>
+          )}
           <Link to="/" className="btn-secondary">
             Back to raids
           </Link>

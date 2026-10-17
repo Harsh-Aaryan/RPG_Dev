@@ -1,0 +1,6 @@
+# Keep LF in the repository; shell scripts must stay LF to run on CI.
+* text=auto eol=lf
+*.sh text eol=lf
+*.png binary
+*.jpg binary
+*.woff2 binary

@@ -55,8 +55,10 @@ export type VerificationReceipt = {
   findingId: string;
   codeHash: string;
   verifiedAt: string;
-  verifier: 'server' | 'local-offline';
+  verifier: 'server' | 'local-offline' | 'github-actions';
   signature: string;
+  /** Pull request whose quest check proved the fix (github-actions receipts). */
+  prNumber?: number;
 };
 
 export type TestResult = { name: string; passed: boolean; detail: string };
@@ -68,3 +70,53 @@ export type VerifyResponse = {
 };
 
 export type MentorMode = 'explain' | 'hint' | 'test';
+
+export type Quest = {
+  id: string;
+  findingId: string;
+  battleId: string;
+  content: QuestContent;
+  source: QuestSource;
+  model?: string;
+  status: QuestStatus;
+  damage: number;
+  claimedBy?: string;
+  attempts: number;
+  issue?: { mock: boolean; number?: number; url?: string; title: string; body: string };
+  receipt?: VerificationReceipt;
+};
+
+export type Participant = { id: string; nickname: string; xp: number; role: 'host' | 'player' };
+
+export type BattleEventType = 'created' | 'join' | 'claim' | 'issue' | 'attempt' | 'hit' | 'reopen' | 'defeated';
+
+export type BattleEvent = {
+  id: string;
+  type: BattleEventType;
+  text: string;
+  actor?: string;
+  questId?: string;
+  damage?: number;
+  createdAt: string;
+};
+
+/** A battle as the browser renders it, whether it lives on this device or in the shared database. */
+export type BattleView = {
+  id: string;
+  name: string;
+  repositoryId: string;
+  label: FindingsFixture['label'];
+  scan: ScanInfo;
+  status: 'forming' | 'active' | 'defeated';
+  createdAt: string;
+  defeatedAt?: string;
+  findings: SafeFinding[];
+  quests: Quest[];
+  participants: Participant[];
+  events: BattleEvent[];
+  /** Shared battle backed by the server; absent for device-local battles. */
+  remote?: boolean;
+};
+
+/** What the server can do in this deployment (GET /api/config). */
+export type ServerConfig = { shared: boolean; gemma: boolean; github: boolean; hostTokenRequired: boolean };

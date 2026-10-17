@@ -11,3 +11,4 @@ worker/__pycache__/
 .playwright-mcp/
 .agent-status/
 tsconfig.tsbuildinfo
+.local-db/
