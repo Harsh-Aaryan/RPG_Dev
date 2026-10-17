@@ -9,7 +9,7 @@ import { HintPanel } from '../components/mentor/HintPanel';
 import { SeverityBadge, SourceBadge } from '../components/ui/Badges';
 import { Shell } from '../components/ui/Shell';
 import { Spinner } from '../components/ui/Spinner';
-import { createGithubIssue, verifyFix } from '../lib/api-client';
+import { createGithubIssue, previewGithubIssue, verifyFix, type IssuePreview } from '../lib/api-client';
 import { SEVERITY_STYLE } from '../lib/game-rules';
 import type { TestResult } from '../lib/types';
 import { myRole, useBattleStore } from '../store/useBattleStore';
@@ -26,7 +26,8 @@ export function QuestPage() {
   const [code, setCode] = useState(finding?.codeExcerpt ?? '');
   const [tests, setTests] = useState<TestResult[] | null>(null);
   const [offline, setOffline] = useState(false);
-  const [busy, setBusy] = useState<'verify' | 'issue' | null>(null);
+  const [busy, setBusy] = useState<'verify' | 'issue' | 'preview' | null>(null);
+  const [preview, setPreview] = useState<(IssuePreview & { offline?: boolean }) | null>(null);
   const [error, setError] = useState('');
 
   if (!battle || !quest || !finding) {
@@ -70,11 +71,24 @@ export function QuestPage() {
     }
   }
 
+  async function reviewIssue() {
+    setBusy('preview');
+    setError('');
+    try {
+      setPreview(await previewGithubIssue(finding!, quest!.content));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not build the issue preview');
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function openIssue() {
     setBusy('issue');
     setError('');
     try {
       attachIssue(battleId, questId, await createGithubIssue(finding!, quest!.content));
+      setPreview(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create issue');
     } finally {
@@ -266,12 +280,40 @@ export function QuestPage() {
                   <pre className="well mt-2 max-h-64 overflow-auto whitespace-pre-wrap p-3 font-mono text-[11px] text-ink-2">{quest.issue.body}</pre>
                 </details>
               </div>
+            ) : isHost && preview ? (
+              <div className="text-sm">
+                <p className="text-ink-2">
+                  Review it first. This is exactly what will be posted{preview.offline ? ' (built locally because the API is offline)' : ''}.
+                </p>
+                <div className="well mt-3 p-3">
+                  <p className="font-semibold text-ink">{preview.title}</p>
+                  <p className="mt-2 flex flex-wrap gap-1.5">
+                    {preview.labels.map((l) => (
+                      <span key={l} className="tag font-mono text-[0.65rem]">
+                        {l}
+                      </span>
+                    ))}
+                  </p>
+                  <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap border-t border-line-soft pt-3 font-mono text-[11px] text-ink-2">
+                    {preview.body}
+                  </pre>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button className="btn-primary" onClick={openIssue} disabled={busy !== null}>
+                    {busy === 'issue' ? <Spinner size={14} /> : <GitPullRequest size={14} aria-hidden />}
+                    Publish issue
+                  </button>
+                  <button className="btn-ghost" onClick={() => setPreview(null)} disabled={busy !== null}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
             ) : isHost ? (
               <>
-                <p className="mb-3 text-sm text-ink-2">Publish an owner-approved, exploit-free remediation task to the demo repo.</p>
-                <button className="btn-secondary" onClick={openIssue} disabled={busy !== null}>
-                  {busy === 'issue' ? <Spinner size={14} /> : <GitPullRequest size={14} aria-hidden />}
-                  Create safe issue
+                <p className="mb-3 text-sm text-ink-2">Draft an owner-approved, exploit-free remediation task for the demo repo. You'll review it before anything is posted.</p>
+                <button className="btn-secondary" onClick={reviewIssue} disabled={busy !== null}>
+                  {busy === 'preview' ? <Spinner size={14} /> : <GitPullRequest size={14} aria-hidden />}
+                  Preview safe issue
                 </button>
               </>
             ) : (

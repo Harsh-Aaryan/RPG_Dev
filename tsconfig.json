@@ -14,5 +14,5 @@
     "noUnusedParameters": true,
     "types": ["vite/client", "node"]
   },
-  "include": ["src", "shared", "netlify/functions", "vite.config.ts"]
+  "include": ["src", "shared", "netlify/functions", "netlify/tests", "vite.config.ts"]
 }

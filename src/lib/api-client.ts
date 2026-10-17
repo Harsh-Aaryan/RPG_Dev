@@ -1,4 +1,4 @@
-import { issueBody, templateQuest } from '../../shared/quest';
+import { buildIssue, templateQuest, type IssuePreview } from '../../shared/quest';
 import { codeHash, RULES, runRegressionChecks } from '../../shared/verifier';
 import type { MentorMode, QuestContent, QuestSource, SafeFinding, VerifyResponse } from './types';
 
@@ -6,6 +6,9 @@ import type { MentorMode, QuestContent, QuestSource, SafeFinding, VerifyResponse
  * Thin client for the Netlify Functions. Every call has an offline fallback so
  * the judge demo still works when functions are unreachable (e.g. `vite preview`);
  * fallbacks are always labelled in the UI.
+ *
+ * Findings travel by id: the server looks up its own copy instead of trusting
+ * finding text from the browser.
  */
 
 let hostToken = '';
@@ -37,7 +40,7 @@ export type GeneratedQuest = { source: QuestSource; model?: string; reason?: str
 
 export async function generateQuest(finding: SafeFinding): Promise<GeneratedQuest> {
   try {
-    return await post<GeneratedQuest>('generate-quest', { finding });
+    return await post<GeneratedQuest>('generate-quest', { findingId: finding.id });
   } catch (err) {
     if (err instanceof ApiUnavailable) {
       return { source: 'template', reason: 'API offline', quest: templateQuest(finding) };
@@ -56,7 +59,13 @@ export async function askMentor(args: {
   quest: QuestContent;
 }): Promise<MentorReply> {
   try {
-    return await post<MentorReply>('mentor', args);
+    return await post<MentorReply>('mentor', {
+      mode: args.mode,
+      hintLevel: args.hintLevel,
+      question: args.question,
+      findingId: args.finding.id,
+      quest: args.quest,
+    });
   } catch (err) {
     if (!(err instanceof ApiUnavailable)) throw err;
     const level = Math.min(3, Math.max(1, args.hintLevel ?? 1));
@@ -78,7 +87,9 @@ export async function verifyFix(args: {
   code: string;
 }): Promise<VerifyResponse & { offline?: boolean }> {
   try {
-    return await post<VerifyResponse>('verify-fix', args);
+    const { ruleId: _ruleId, ...body } = args;
+    void _ruleId; // the server derives the rule from findingId
+    return await post<VerifyResponse>('verify-fix', body);
   } catch (err) {
     if (!(err instanceof ApiUnavailable)) throw err;
     // Offline demo fallback: same deterministic checks, but the receipt is unsigned and labelled.
@@ -103,13 +114,26 @@ export async function verifyFix(args: {
   }
 }
 
+export type { IssuePreview };
 export type IssueResult = { mock: boolean; reused?: boolean; number?: number; url?: string; title: string; body: string; reason?: string };
+
+/** The exact issue the host is about to publish. Nothing is posted. */
+export async function previewGithubIssue(finding: SafeFinding, quest: QuestContent): Promise<IssuePreview & { offline?: boolean }> {
+  try {
+    const { title, body, labels } = await post<IssuePreview>('create-github-issue', { findingId: finding.id, quest, dryRun: true });
+    return { title, body, labels };
+  } catch (err) {
+    if (!(err instanceof ApiUnavailable)) throw err;
+    return { ...buildIssue(finding, quest), offline: true };
+  }
+}
 
 export async function createGithubIssue(finding: SafeFinding, quest: QuestContent): Promise<IssueResult> {
   try {
-    return await post<IssueResult>('create-github-issue', { finding, quest });
+    return await post<IssueResult>('create-github-issue', { findingId: finding.id, quest });
   } catch (err) {
     if (!(err instanceof ApiUnavailable)) throw err;
-    return { mock: true, reason: 'API offline', title: `[RepoRaid] ${quest.questTitle}`, body: issueBody(finding, quest) };
+    const { title, body } = buildIssue(finding, quest);
+    return { mock: true, reason: 'API offline', title, body };
   }
 }
