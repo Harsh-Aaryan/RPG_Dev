@@ -1,5 +1,7 @@
 import { Octokit } from '@octokit/rest';
 import { buildIssue, QuestContentSchema, templateQuest } from '../../shared/quest';
+import { attachIssue } from '../../shared/server/battles';
+import { getDb } from '../../shared/server/db';
 import { knownFinding } from '../../shared/server/findings';
 import { isHost, json, methodNotAllowed, readJson } from '../../shared/server/http';
 import type { QuestContent } from '../../shared/types';
@@ -13,7 +15,7 @@ const ALLOWED_REPO = process.env.GITHUB_REPO; // owner/name of the team-controll
 export default async (req: Request) => {
   if (req.method !== 'POST') return methodNotAllowed();
   if (!isHost(req)) return json({ error: 'Host token required' }, 401);
-  const b = await readJson<{ findingId: string; quest: QuestContent; dryRun?: boolean }>(req);
+  const b = await readJson<{ findingId: string; quest: QuestContent; dryRun?: boolean; battleId?: string; questId?: string }>(req);
   const finding = knownFinding(b?.findingId);
   if (!finding) return json({ error: 'Unknown findingId' }, 400);
   const parsed = QuestContentSchema.safeParse(b?.quest);
@@ -21,7 +23,14 @@ export default async (req: Request) => {
 
   if (b?.dryRun) return json({ preview: true, ...issue });
 
+  // In a shared battle the issue is recorded on the quest for everyone to see.
+  const db = getDb();
+  const remember = async (result: { mock: boolean; number?: number; url?: string }) => {
+    if (db && b?.battleId && b.questId) await attachIssue(db, b.battleId, b.questId, { ...result, title: issue.title, body: issue.body });
+  };
+
   if (!process.env.GITHUB_TOKEN || !ALLOWED_REPO) {
+    await remember({ mock: true });
     return json({ mock: true, reason: 'GITHUB_TOKEN / GITHUB_REPO not configured', ...issue });
   }
 
@@ -35,8 +44,12 @@ export default async (req: Request) => {
     per_page: 1,
   });
   const found = existing.data.items[0];
-  if (found) return json({ mock: false, reused: true, number: found.number, url: found.html_url, ...issue });
+  if (found) {
+    await remember({ mock: false, number: found.number, url: found.html_url });
+    return json({ mock: false, reused: true, number: found.number, url: found.html_url, ...issue });
+  }
 
   const created = await octokit.issues.create({ owner, repo, title: issue.title, body: issue.body, labels: issue.labels });
+  await remember({ mock: false, number: created.data.number, url: created.data.html_url });
   return json({ mock: false, number: created.data.number, url: created.data.html_url, ...issue });
 };

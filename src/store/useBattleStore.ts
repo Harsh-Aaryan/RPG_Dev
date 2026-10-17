@@ -3,31 +3,9 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { bossCurrentHP, bossMaxHP, damageWeight, XP_PER_DAMAGE } from '../lib/game-rules';
 import { clientId, shortId } from '../lib/id';
 import type { GeneratedQuest, IssueResult } from '../lib/api-client';
-import type {
-  BattleEvent,
-  BattleEventType,
-  FindingsFixture,
-  Participant,
-  Quest,
-  SafeFinding,
-  ScanInfo,
-  VerificationReceipt,
-} from '../lib/types';
+import type { BattleEvent, BattleEventType, BattleView, FindingsFixture, Participant, VerificationReceipt } from '../lib/types';
 
-export type Battle = {
-  id: string;
-  name: string;
-  repositoryId: string;
-  label: FindingsFixture['label'];
-  scan: ScanInfo;
-  status: 'forming' | 'active' | 'defeated';
-  createdAt: string;
-  defeatedAt?: string;
-  findings: SafeFinding[];
-  quests: Quest[];
-  participants: Participant[];
-  events: BattleEvent[];
-};
+export type Battle = BattleView;
 
 type State = {
   me: string;
