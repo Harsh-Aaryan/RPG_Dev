@@ -1,24 +1,116 @@
 @import 'tailwindcss';
 
+/*
+ * RepoRaid design tokens — dark fantasy × tactical security.
+ * Copper is the only signature accent. Ember, sage and gold are reserved for
+ * game state (danger, verified, warning). Severity always ships with a sigil
+ * and a text label, never colour alone.
+ */
 @theme {
-  --color-obsidian: #10131f;
-  --color-obsidian-2: #161a2a;
-  --color-slate: #232941;
-  --color-slate-2: #2f3654;
-  --color-violet: #9c78ff;
-  --color-cyan: #49dbf2;
-  --color-emerald: #61e6ac;
-  --color-coral: #ff6c79;
-  --color-amber: #ffb35c;
-  --color-sand: #f0e6d2;
-  --color-mist: #a9aec8;
-  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  /* Base */
+  --color-night: #121714;
+  --color-night-2: #181f1b;
+  --color-abyss: #0c100e;
+  --color-iron: #202923;
+  --color-iron-2: #2c372f;
+  --color-line: #415044;
+  --color-line-soft: #2e3931;
+
+  /* Typography */
+  --color-ink: #ede7d9;
+  --color-ink-2: #afb7ab;
+  --color-ink-3: #7f8c80;
+  --color-parchment: #e7ddc8;
+
+  /* Accents */
+  --color-copper: #c99460;
+  --color-copper-hi: #dda875;
+  --color-copper-lo: #8a5f38;
+  --color-ember: #c66a5e;
+  --color-sage: #82a58a;
+  --color-gold: #d0a260;
+
+  /* Severity (paired with sigils + labels in SeverityBadge) */
+  --color-sev-critical: #c66a5e;
+  --color-sev-high: #d0a260;
+  --color-sev-medium: #b9a684;
+  --color-sev-low: #8d9a92;
+
+  --font-display: 'Grenze', 'Iowan Old Style', Georgia, serif;
+  --font-sans: 'IBM Plex Sans Variable', 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+
+  /* Classic typographic scale: 12 14 16 18 21 24 30 36 48 60 72 */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.05rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.3rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.55rem;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.6rem;
+  --text-xl: 1.3125rem;
+  --text-xl--line-height: 1.7rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 1.9rem;
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: 2.2rem;
+  --text-4xl: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
+  --text-5xl: 3rem;
+  --text-5xl--line-height: 1;
+  --text-6xl: 3.75rem;
+  --text-6xl--line-height: 0.98;
+  --text-7xl: 4.5rem;
+  --text-7xl--line-height: 0.95;
+
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+
+  --ease-forge: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-strike: cubic-bezier(0.3, 1.35, 0.5, 1);
+
+  --animate-ember-pulse: ember-pulse 2.4s ease-in-out infinite;
+  --animate-hp-flash: hp-flash 420ms ease-out;
+  --animate-seal-in: seal-in 520ms var(--ease-strike) both;
+  --animate-shimmer: shimmer 1.8s ease-in-out 1 both;
+
+  @keyframes ember-pulse {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
+  }
+  @keyframes hp-flash {
+    0% { opacity: 0.85; }
+    100% { opacity: 0; }
+  }
+  @keyframes seal-in {
+    0% { opacity: 0; transform: scale(1.6) rotate(-18deg); }
+    100% { opacity: 1; transform: scale(1) rotate(-8deg); }
+  }
+  @keyframes shimmer {
+    0% { transform: translateX(-120%); }
+    100% { transform: translateX(220%); }
+  }
 }
 
+/* Motion + shape tokens for component utilities */
 :root {
   color-scheme: dark;
+  --dur-1: 140ms;
+  --dur-2: 220ms;
+  --dur-3: 420ms;
+  --cut: 12px;
+  --edge: var(--color-line);
+  --fill: var(--color-iron);
+  --bevel: inset 0 1px 0 rgb(237 231 217 / 0.045), inset 0 -1px 0 rgb(0 0 0 / 0.35);
+  --lift: 0 1px 0 rgb(0 0 0 / 0.5), 0 10px 24px -14px rgb(0 0 0 / 0.8);
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.93 0 0 0 0 0.9 0 0 0 0 0.85 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 html,
@@ -29,48 +121,322 @@ body,
 
 body {
   margin: 0;
-  background:
-    radial-gradient(1200px 600px at 50% -10%, rgb(156 120 255 / 0.18), transparent 60%),
-    radial-gradient(800px 400px at 100% 100%, rgb(73 219 242 / 0.08), transparent 60%),
-    var(--color-obsidian);
+  background-color: var(--color-night);
+  background-image:
+    radial-gradient(1100px 520px at 72% -8%, rgb(201 148 96 / 0.075), transparent 62%),
+    radial-gradient(900px 600px at -10% 110%, rgb(130 165 138 / 0.05), transparent 60%),
+    linear-gradient(180deg, var(--color-night-2) 0%, var(--color-night) 420px);
   background-attachment: fixed;
-  color: var(--color-sand);
+  color: var(--color-ink);
   font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-@utility panel {
-  @apply rounded-2xl border border-white/8 bg-slate/70 backdrop-blur-md shadow-[0_8px_30px_rgb(0_0_0/0.35)];
+/* Hand-made texture: a faint, static film grain over everything. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  background-image: var(--grain);
+  opacity: 0.045;
+  mix-blend-mode: soft-light;
 }
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+::selection {
+  background: rgb(201 148 96 / 0.35);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-copper-hi);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Surfaces                                                            */
+/* ------------------------------------------------------------------ */
+
+/* Forged panel: iron surface, engraved bevel, small radius. */
+@utility frame {
+  position: relative;
+  border: 1px solid var(--color-line-soft);
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(180deg, rgb(237 231 217 / 0.025), transparent 40%),
+    var(--color-iron);
+  box-shadow: var(--bevel), var(--lift);
+}
+
+/* Chamfered plate (top-left + bottom-right corners cut). The element itself is
+   not clipped, so focus outlines and hover transforms keep working. */
+@utility plate {
+  position: relative;
+  isolation: isolate;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+    transition: background var(--dur-2) var(--ease-forge);
+  }
+  &::before {
+    inset: 0;
+    background: var(--edge);
+    clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+  }
+  &::after {
+    inset: 1px;
+    background:
+      linear-gradient(180deg, rgb(237 231 217 / 0.03), transparent 45%),
+      var(--fill);
+    clip-path: polygon(
+      calc(var(--cut) - 0.6px) 0,
+      100% 0,
+      100% calc(100% - var(--cut) + 0.6px),
+      calc(100% - var(--cut) + 0.6px) 100%,
+      0 100%,
+      0 calc(var(--cut) - 0.6px)
+    );
+  }
+}
+
+/* Soft cast shadow for chamfered plates. Not for plates that hold a canvas. */
+@utility plate-lift {
+  filter: drop-shadow(0 8px 12px rgb(0 0 0 / 0.38));
+  transition: filter var(--dur-2) var(--ease-forge), transform var(--dur-2) var(--ease-forge);
+
+  &:hover {
+    filter: drop-shadow(0 14px 18px rgb(0 0 0 / 0.5));
+  }
+}
+
+/* Sunken well for terminals, code and QR backing. */
+@utility well {
+  border: 1px solid var(--color-line-soft);
+  border-radius: var(--radius-xs);
+  background: var(--color-abyss);
+  box-shadow: inset 0 2px 6px rgb(0 0 0 / 0.55);
+}
+
+/* Section heading with an engraved rule running to the edge. */
+@utility rule-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-lg);
+  line-height: 1.2;
+  color: var(--color-ink);
+
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--color-line), transparent);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Controls                                                            */
+/* ------------------------------------------------------------------ */
+
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-display font-semibold tracking-wide transition
-    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan disabled:cursor-not-allowed disabled:opacity-50;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  padding: 0.55rem 1rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.1;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    transform var(--dur-1) var(--ease-forge),
+    background var(--dur-2) var(--ease-forge),
+    border-color var(--dur-2) var(--ease-forge),
+    color var(--dur-2) var(--ease-forge),
+    box-shadow var(--dur-2) var(--ease-forge);
+
+  &:disabled,
+  &[aria-disabled='true'] {
+    cursor: not-allowed;
+    opacity: 0.45;
+    transform: none;
+  }
 }
+
+/* Struck copper: the one physical, game-like primary action. */
 @utility btn-primary {
-  @apply btn bg-violet text-obsidian hover:bg-[#b49aff] shadow-[0_0_24px_rgb(156_120_255/0.45)];
+  @apply btn;
+  color: #1c140c;
+  border: 1px solid #6f4b2a;
+  background: linear-gradient(180deg, #d6a46f 0%, var(--color-copper) 55%, #b78150 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 238 214 / 0.5),
+    inset 0 -2px 0 rgb(90 58 30 / 0.35),
+    0 3px 0 #4a321d,
+    0 8px 18px -8px rgb(0 0 0 / 0.75);
+  text-shadow: 0 1px 0 rgb(255 232 200 / 0.35);
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(180deg, #e6b886 0%, var(--color-copper-hi) 55%, #c58e5b 100%);
+  }
+  &:active:not(:disabled) {
+    transform: translateY(3px);
+    box-shadow:
+      inset 0 2px 3px rgb(74 50 29 / 0.45),
+      0 0 0 #4a321d,
+      0 2px 6px -2px rgb(0 0 0 / 0.6);
+  }
+  &:focus-visible {
+    outline-color: var(--color-ink);
+  }
 }
+
+@utility btn-secondary {
+  @apply btn;
+  color: var(--color-ink);
+  border: 1px solid var(--color-line);
+  background: linear-gradient(180deg, var(--color-iron-2), var(--color-iron));
+  box-shadow: var(--bevel), 0 2px 0 rgb(0 0 0 / 0.45);
+
+  &:hover:not(:disabled) {
+    border-color: rgb(201 148 96 / 0.55);
+    color: var(--color-copper-hi);
+  }
+  &:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: inset 0 2px 3px rgb(0 0 0 / 0.4);
+  }
+}
+
 @utility btn-ghost {
-  @apply btn border border-white/12 bg-white/5 text-sand hover:bg-white/10;
+  @apply btn;
+  min-height: 2rem;
+  padding: 0.35rem 0.6rem;
+  color: var(--color-ink-2);
+  border: 1px solid transparent;
+  background: transparent;
+
+  &:hover:not(:disabled) {
+    color: var(--color-ink);
+    background: rgb(237 231 217 / 0.05);
+    border-color: var(--color-line-soft);
+  }
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
 }
+
 @utility btn-danger {
-  @apply btn border border-coral/40 bg-coral/10 text-coral hover:bg-coral/20;
+  @apply btn;
+  color: #e3a097;
+  border: 1px solid rgb(198 106 94 / 0.45);
+  background: rgb(198 106 94 / 0.08);
+
+  &:hover:not(:disabled) {
+    background: rgb(198 106 94 / 0.16);
+    border-color: rgb(198 106 94 / 0.75);
+  }
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
 }
-@utility chip {
-  @apply inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium;
+
+/* Small inscribed tag (not a pill). */
+@utility tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.12rem 0.45rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-xs);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--color-ink-2);
+  background: rgb(18 23 20 / 0.55);
+  white-space: nowrap;
 }
-@utility label {
-  @apply font-display text-xs font-semibold uppercase tracking-[0.18em] text-mist;
+
+@utility field {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-abyss);
+  color: var(--color-ink);
+  box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.5);
+  transition: border-color var(--dur-2) var(--ease-forge), box-shadow var(--dur-2) var(--ease-forge);
+
+  &::placeholder {
+    color: var(--color-ink-3);
+  }
+  &:focus {
+    outline: none;
+    border-color: var(--color-copper);
+    box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.5), 0 0 0 3px rgb(201 148 96 / 0.18);
+  }
+  &:disabled {
+    opacity: 0.6;
+  }
 }
-@utility input {
-  @apply w-full rounded-xl border border-white/12 bg-obsidian/70 px-3 py-2.5 text-sand placeholder:text-mist/60
-    focus:border-cyan focus:outline-none;
+
+/* Visible label for form fields — sentence case, quiet. */
+@utility field-label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-ink-2);
 }
+
+/* ------------------------------------------------------------------ */
+/* Motion preferences                                                  */
+/* ------------------------------------------------------------------ */
 
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
+}
+
+html[data-reduced-motion='true'] *,
+html[data-reduced-motion='true'] *::before,
+html[data-reduced-motion='true'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }

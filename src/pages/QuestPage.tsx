@@ -1,12 +1,16 @@
-import { ArrowLeft, CheckCircle2, ExternalLink, FlaskConical, GitPullRequest, Loader2, ShieldCheck, Sparkles, Swords, Wand2, XCircle } from 'lucide-react';
+import { ArrowLeft, Check, ExternalLink, FlaskConical, GitPullRequest, ScrollText, Wand2, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { RULES } from '../../shared/verifier';
+import { Emblem } from '../components/art/Emblem';
+import { Seal, SwordGlyph } from '../components/art/Sigils';
 import { HintPanel } from '../components/mentor/HintPanel';
 import { SeverityBadge, SourceBadge } from '../components/ui/Badges';
 import { Shell } from '../components/ui/Shell';
+import { Spinner } from '../components/ui/Spinner';
 import { createGithubIssue, verifyFix } from '../lib/api-client';
+import { SEVERITY_STYLE } from '../lib/game-rules';
 import type { TestResult } from '../lib/types';
 import { myRole, useBattleStore } from '../store/useBattleStore';
 
@@ -28,10 +32,12 @@ export function QuestPage() {
   if (!battle || !quest || !finding) {
     return (
       <Shell>
-        <div className="panel mx-auto mt-16 max-w-md p-6 text-center">
-          <p>Quest not found on this device.</p>
-          <Link to={battle ? `/battle/${battleId}` : '/'} className="btn-ghost mt-4">
-            Back
+        <div className="frame mx-auto mt-16 max-w-md p-7 text-center">
+          <Emblem size={36} className="mx-auto" />
+          <h1 className="mt-3 font-display text-2xl font-bold text-ink">This quest isn't on this device</h1>
+          <p className="mt-2 text-sm text-ink-2">Quests live with their battle. Open the battle first, then pick the quest from its board.</p>
+          <Link to={battle ? `/battle/${battleId}` : '/'} className="btn-secondary mt-5">
+            {battle ? 'Back to the arena' : 'Back to raids'}
           </Link>
         </div>
       </Shell>
@@ -41,6 +47,9 @@ export function QuestPage() {
   const isHost = myRole(battle, me) === 'host';
   const verified = quest.status === 'verified';
   const rule = RULES[finding.ruleId];
+  const sev = SEVERITY_STYLE[finding.severity];
+  const claimedByMe = quest.claimedBy === me;
+  const claimer = battle.participants.find((p) => p.id === quest.claimedBy)?.nickname;
 
   async function runVerify() {
     setBusy('verify');
@@ -75,104 +84,136 @@ export function QuestPage() {
 
   return (
     <Shell wide>
-      <div className="pt-4">
-        <Link to={`/battle/${battleId}`} className="inline-flex items-center gap-1 text-sm text-mist hover:text-sand">
-          <ArrowLeft size={14} aria-hidden /> Back to arena
+      <div className="pt-5">
+        <Link to={`/battle/${battleId}`} className="inline-flex items-center gap-1.5 rounded-xs text-sm text-ink-2 hover:text-ink">
+          <ArrowLeft size={14} aria-hidden /> Back to the arena
         </Link>
       </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
-        <div className="min-w-0 space-y-4">
-          <section className="panel p-5">
-            <div className="flex flex-wrap items-center gap-2">
-              <SeverityBadge severity={finding.severity} />
-              <SourceBadge source={quest.source} model={quest.model} />
-              <span className="chip border-white/15 text-mist">{finding.cwe}</span>
-              <span className="chip border-coral/40 text-coral">
-                <Swords size={12} aria-hidden /> {quest.damage} damage
+      <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_25rem]">
+        <div className="min-w-0 space-y-6">
+          <section className="frame relative overflow-hidden p-6 sm:p-7">
+            <span className={`absolute inset-y-0 left-0 w-[3px] ${verified ? 'bg-sage/70' : sev.bar}`} aria-hidden />
+            {verified && (
+              <span className="pointer-events-none absolute right-5 top-5" aria-hidden>
+                <Seal size={64} className="-rotate-[8deg]" />
               </span>
-              {verified && (
-                <span className="chip border-emerald/50 bg-emerald/10 text-emerald">
-                  <CheckCircle2 size={12} aria-hidden /> Verified
-                </span>
-              )}
+            )}
+            <div className="flex flex-wrap items-center gap-2 pr-16">
+              <SeverityBadge severity={finding.severity} size="md" />
+              <SourceBadge source={quest.source} model={quest.model} long />
+              {finding.cwe && <span className="tag font-mono">{finding.cwe}</span>}
+              <span className="tag text-[#e39a8d]">
+                <SwordGlyph size={13} /> {quest.damage} damage
+              </span>
             </div>
-            <h1 className="mt-3 font-display text-2xl font-bold sm:text-3xl">{quest.content.questTitle}</h1>
-            <p className="mt-1 text-sm text-mist">
-              {finding.title} · <span className="font-mono">{finding.affectedPath}{finding.line ? `:${finding.line}` : ''}</span>
+            <h1 className="mt-4 font-display text-4xl font-bold leading-[1.02] text-ink sm:text-5xl">{quest.content.questTitle}</h1>
+            <p className="mt-2 text-sm text-ink-3">
+              {finding.title} in{' '}
+              <span className="font-mono text-ink-2">
+                {finding.affectedPath}
+                {finding.line ? `:${finding.line}` : ''}
+              </span>
             </p>
-            <p className="mt-4 leading-relaxed text-sand/90">{quest.content.plainEnglishExplanation}</p>
-            <div className="mt-4 rounded-xl border border-violet/30 bg-violet/10 p-3">
-              <p className="label text-violet">Learning goal</p>
-              <p className="mt-1 text-sm">{quest.content.learningGoal}</p>
+            <p className="mt-5 max-w-[65ch] leading-relaxed text-ink">{quest.content.plainEnglishExplanation}</p>
+
+            <div className="mt-6 border-l-2 border-copper/70 bg-copper/[0.05] py-3 pl-4 pr-3">
+              <p className="text-sm font-semibold text-copper-hi">Learning goal</p>
+              <p className="mt-1 text-sm text-ink">{quest.content.learningGoal}</p>
             </div>
-            <div className="mt-4">
-              <p className="label mb-2">Acceptance criteria</p>
-              <ul className="space-y-1 text-sm">
+
+            <div className="mt-6">
+              <h2 className="text-sm font-semibold text-ink">Acceptance criteria</h2>
+              <ul className="mt-2 space-y-1.5 text-sm text-ink-2">
                 {quest.content.fixAcceptanceCriteria.map((c) => (
-                  <li key={c} className="flex gap-2">
-                    <span className="text-violet" aria-hidden>◆</span> {c}
+                  <li key={c} className="flex gap-2.5">
+                    <svg width="10" height="10" viewBox="0 0 10 10" className="mt-1.5 shrink-0" aria-hidden>
+                      <path d="M5 0.8 9.2 5 5 9.2 0.8 5Z" fill={verified ? '#82a58a' : 'none'} stroke={verified ? '#82a58a' : '#c99460'} strokeWidth="1.2" />
+                    </svg>
+                    {c}
                   </li>
                 ))}
               </ul>
             </div>
-            {!verified && quest.claimedBy !== me && (
-              <button className="btn-primary mt-5" onClick={() => claimQuest(battleId, questId)}>
-                <Sparkles size={16} aria-hidden /> Accept quest
-              </button>
-            )}
+
+            {!verified &&
+              (claimedByMe ? (
+                <p className="mt-6 inline-flex items-center gap-2 text-sm text-copper">
+                  <Check size={15} aria-hidden /> You've accepted this quest. Forge a fix below.
+                </p>
+              ) : (
+                <div className="mt-6 flex flex-wrap items-center gap-3">
+                  <button className="btn-primary min-h-11 px-5" onClick={() => claimQuest(battleId, questId)}>
+                    <ScrollText size={16} aria-hidden /> Accept quest
+                  </button>
+                  {claimer && <span className="text-sm text-ink-3">{claimer} has accepted it. Accepting moves the claim to you.</span>}
+                </div>
+              ))}
           </section>
 
-          <section className="panel p-5" aria-labelledby="forge-title">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h2 id="forge-title" className="font-display text-lg font-semibold">
+          <section className="frame p-6 sm:p-7" aria-labelledby="forge-title">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+              <h2 id="forge-title" className="font-display text-2xl font-semibold text-ink">
                 Patch forge
               </h2>
               {isHost && !verified && rule && (
-                <button className="btn-ghost px-3 py-1.5 text-xs" onClick={() => setCode(rule.referencePatch)} title="Host-only demo shortcut">
+                <button className="btn-ghost text-xs" onClick={() => setCode(rule.referencePatch)} title="Host-only demo shortcut">
                   <Wand2 size={13} aria-hidden /> Load reference patch (host demo)
                 </button>
               )}
             </div>
-            <p className="mb-2 text-sm text-mist">
-              Edit <span className="font-mono">{finding.affectedFunction}()</span> from{' '}
-              <span className="font-mono">{finding.affectedPath}</span>, then run the regression test. Only a passing test deals damage.
+            <p className="mb-4 text-sm text-ink-2">
+              Edit <span className="font-mono text-ink">{finding.affectedFunction}()</span> from{' '}
+              <span className="font-mono text-ink">{finding.affectedPath}</span>, then run the regression test. Only a passing test deals
+              damage.
             </p>
-            <label htmlFor="patch" className="sr-only">
-              Proposed fix
-            </label>
-            <textarea
-              id="patch"
-              className="input h-56 resize-y font-mono text-[13px] leading-relaxed"
-              spellCheck={false}
-              value={code}
-              disabled={verified}
-              onChange={(e) => setCode(e.target.value)}
-            />
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <button className="btn-primary" onClick={runVerify} disabled={busy !== null || verified || !code.trim()}>
-                {busy === 'verify' ? <Loader2 size={16} className="animate-spin" /> : <FlaskConical size={16} aria-hidden />}
-                Run regression test
+
+            <div className="well overflow-hidden">
+              <div className="flex items-center gap-2 border-b border-line-soft bg-night-2 px-3 py-1.5 font-mono text-[0.7rem] text-ink-3">
+                <span className="h-2 w-2 rotate-45 bg-copper/70" aria-hidden />
+                {finding.affectedPath}
+                <span className="text-ink-2">› {finding.affectedFunction}()</span>
+              </div>
+              <label htmlFor="patch" className="sr-only">
+                Proposed fix
+              </label>
+              <textarea
+                id="patch"
+                className="block h-60 w-full resize-y bg-transparent p-3.5 font-mono text-[13px] leading-relaxed text-ink outline-none placeholder:text-ink-3 focus-visible:shadow-[inset_0_0_0_1px_var(--color-copper)] disabled:opacity-60"
+                spellCheck={false}
+                value={code}
+                disabled={verified}
+                onChange={(e) => setCode(e.target.value)}
+              />
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-4">
+              <button className="btn-primary min-h-11 px-5" onClick={runVerify} disabled={busy !== null || verified || !code.trim()}>
+                {busy === 'verify' ? <Spinner size={16} /> : <FlaskConical size={16} aria-hidden />}
+                {busy === 'verify' ? 'Running the test…' : 'Run regression test'}
               </button>
-              <span className="text-xs text-mist">Attempts: {quest.attempts}</span>
+              <span className="text-xs text-ink-3">
+                Attempts <span className="font-mono text-ink-2">{quest.attempts}</span>
+              </span>
             </div>
 
             {tests && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 rounded-xl border border-white/10 bg-[#0a0c14] p-3">
-                <p className="mb-2 font-mono text-xs text-mist">
+              <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="well mt-5 p-4">
+                <p className="mb-3 font-mono text-xs text-ink-3">
                   regression {finding.ruleId} · {offline ? 'local verifier (API offline, unsigned)' : 'server verifier'}
                 </p>
-                <ul className="space-y-1.5 font-mono text-xs">
+                <ul className="space-y-2 font-mono text-xs">
                   {tests.map((t) => (
-                    <li key={t.name} className="flex gap-2">
+                    <li key={t.name} className="flex gap-2.5">
                       {t.passed ? (
-                        <CheckCircle2 size={14} className="shrink-0 text-emerald" aria-label="pass" />
+                        <Check size={14} className="mt-px shrink-0 text-sage" aria-label="pass" />
                       ) : (
-                        <XCircle size={14} className="shrink-0 text-coral" aria-label="fail" />
+                        <X size={14} className="mt-px shrink-0 text-ember" aria-label="fail" />
                       )}
                       <span>
-                        <span className={t.passed ? 'text-sand' : 'text-coral'}>{t.passed ? 'PASS' : 'FAIL'}</span> {t.name}
-                        {!t.passed && <span className="block text-mist">{t.detail}</span>}
+                        <span className={t.passed ? 'text-sage' : 'text-ember'}>{t.passed ? 'PASS' : 'FAIL'}</span>{' '}
+                        <span className="text-ink">{t.name}</span>
+                        {!t.passed && <span className="mt-0.5 block text-ink-3">{t.detail}</span>}
                       </span>
                     </li>
                   ))}
@@ -181,55 +222,62 @@ export function QuestPage() {
             )}
 
             {verified && quest.receipt && (
-              <div className="mt-4 rounded-xl border border-emerald/40 bg-emerald/10 p-3 text-sm">
-                <p className="flex items-center gap-2 font-medium text-emerald">
-                  <ShieldCheck size={16} aria-hidden /> Verified fix: −{quest.damage} HP dealt
-                </p>
-                <p className="mt-1 font-mono text-[11px] text-mist">
-                  {quest.receipt.verifier} · code {quest.receipt.codeHash} · sig {quest.receipt.signature.slice(0, 16)}… ·{' '}
-                  {new Date(quest.receipt.verifiedAt).toLocaleString()}
-                </p>
-              </div>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mt-5 flex items-center gap-4 border border-sage/40 bg-sage/[0.07] p-4"
+              >
+                <Seal size={48} className="shrink-0 -rotate-6" />
+                <div className="min-w-0">
+                  <p className="font-display text-xl font-semibold text-ink">Verified fix: −{quest.damage} HP dealt</p>
+                  <p className="mt-1 break-all font-mono text-[0.7rem] text-ink-3">
+                    {quest.receipt.verifier} · code {quest.receipt.codeHash} · sig {quest.receipt.signature.slice(0, 16)}… ·{' '}
+                    {new Date(quest.receipt.verifiedAt).toLocaleString()}
+                  </p>
+                </div>
+              </motion.div>
             )}
-            {error && <p className="mt-3 text-sm text-coral">{error}</p>}
+            {error && (
+              <p className="mt-4 text-sm text-ember" role="alert">
+                {error}
+              </p>
+            )}
           </section>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-5">
           <HintPanel finding={finding} quest={quest.content} />
 
-          <section className="panel p-4" aria-labelledby="gh-title">
-            <h2 id="gh-title" className="mb-2 flex items-center gap-2 font-display font-semibold">
-              <GitPullRequest size={16} aria-hidden /> GitHub issue
+          <section className="frame p-5" aria-labelledby="gh-title">
+            <h2 id="gh-title" className="rule-heading mb-3">
+              GitHub issue
             </h2>
             {quest.issue ? (
-              <div className="space-y-2 text-sm">
+              <div className="space-y-2.5 text-sm">
                 {quest.issue.mock ? (
-                  <p className="text-amber">Simulated issue (no GITHUB_TOKEN configured). Here is the safe body that would be posted:</p>
+                  <p className="text-gold">Simulated issue (no GITHUB_TOKEN configured). This is the safe body that would be posted:</p>
                 ) : (
-                  <a className="inline-flex items-center gap-1 text-cyan hover:underline" href={quest.issue.url} target="_blank" rel="noreferrer">
-                    Issue #{quest.issue.number} <ExternalLink size={12} aria-hidden />
+                  <a className="inline-flex items-center gap-1.5 text-copper-hi hover:underline" href={quest.issue.url} target="_blank" rel="noreferrer">
+                    <GitPullRequest size={14} aria-hidden /> Issue #{quest.issue.number} <ExternalLink size={12} aria-hidden />
                   </a>
                 )}
                 <details>
-                  <summary className="cursor-pointer text-mist">Issue body</summary>
-                  <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded-lg bg-obsidian/70 p-2 font-mono text-[11px] text-sand/85">
-                    {quest.issue.body}
-                  </pre>
+                  <summary className="cursor-pointer text-ink-2 hover:text-ink">Issue body</summary>
+                  <pre className="well mt-2 max-h-64 overflow-auto whitespace-pre-wrap p-3 font-mono text-[11px] text-ink-2">{quest.issue.body}</pre>
                 </details>
               </div>
             ) : isHost ? (
               <>
-                <p className="mb-3 text-sm text-mist">Publish an owner-approved, exploit-free remediation task to the demo repo.</p>
-                <button className="btn-ghost text-sm" onClick={openIssue} disabled={busy !== null}>
-                  {busy === 'issue' ? <Loader2 size={14} className="animate-spin" /> : <GitPullRequest size={14} aria-hidden />}
+                <p className="mb-3 text-sm text-ink-2">Publish an owner-approved, exploit-free remediation task to the demo repo.</p>
+                <button className="btn-secondary" onClick={openIssue} disabled={busy !== null}>
+                  {busy === 'issue' ? <Spinner size={14} /> : <GitPullRequest size={14} aria-hidden />}
                   Create safe issue
                 </button>
               </>
             ) : (
-              <p className="text-sm text-mist">The host hasn't published an issue for this quest yet.</p>
+              <p className="text-sm text-ink-3">The host hasn't published an issue for this quest yet.</p>
             )}
-            <p className="mt-3 text-xs text-mist">Closing the issue alone never damages the boss.</p>
+            <p className="mt-4 border-t border-line-soft pt-3 text-xs text-ink-3">Closing the issue alone never damages the boss.</p>
           </section>
         </div>
       </div>

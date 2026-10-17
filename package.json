@@ -13,6 +13,9 @@
     "verify:fix": "python3 worker/verify_fix.py"
   },
   "dependencies": {
+    "@fontsource-variable/ibm-plex-sans": "^5.3.0",
+    "@fontsource/grenze": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
     "@google/genai": "^2.30.0",
     "@netlify/functions": "^6.0.2",
     "@octokit/rest": "^22.0.1",

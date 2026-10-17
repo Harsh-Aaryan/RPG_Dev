@@ -1,9 +1,10 @@
-import { BookOpen, FlaskConical, Lightbulb, Loader2, Send, Sparkles } from 'lucide-react';
+import { BookOpen, FlaskConical, Lightbulb, Send } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
 import { askMentor, type MentorReply } from '../../lib/api-client';
 import type { MentorMode, QuestContent, SafeFinding } from '../../lib/types';
 import { SourceBadge } from '../ui/Badges';
+import { Spinner } from '../ui/Spinner';
 
 type Entry = MentorReply & { id: number; label: string };
 
@@ -32,32 +33,35 @@ export function HintPanel({ finding, quest }: { finding: SafeFinding; quest: Que
   const nextHint = hintLevel + 1;
 
   return (
-    <section className="panel p-4" aria-labelledby="mentor-title">
-      <div className="mb-3 flex items-center gap-2">
-        <Sparkles size={16} className="text-emerald" aria-hidden />
-        <h2 id="mentor-title" className="font-display font-semibold">
-          Mentor
-        </h2>
-        <span className="text-xs text-mist">· powered by Gemma 4 when configured</span>
-      </div>
+    <section className="frame p-5" aria-labelledby="mentor-title">
+      <h2 id="mentor-title" className="rule-heading">
+        Mentor
+      </h2>
+      <p className="mt-1 text-xs text-ink-3">Gemma 4 answers when it's configured. Otherwise you get the hand-written guide.</p>
 
-      <div className="flex flex-wrap gap-2">
-        <button className="btn-ghost px-3 py-2 text-sm" disabled={!!busy} onClick={() => ask('explain', 'Explain it')}>
-          {busy === 'explain' ? <Loader2 size={14} className="animate-spin" /> : <BookOpen size={14} aria-hidden />}
+      <div className="mt-4 grid gap-2">
+        <button className="btn-secondary justify-start" disabled={!!busy} onClick={() => ask('explain', 'Explain it')}>
+          {busy === 'explain' ? <Spinner /> : <BookOpen size={14} aria-hidden />}
           Explain it
         </button>
         <button
-          className="btn-ghost px-3 py-2 text-sm"
+          className="btn-secondary justify-start"
           disabled={!!busy || nextHint > 3}
           onClick={async () => {
             if (await ask('hint', `Hint ${nextHint} of 3`, { hintLevel: nextHint })) setHintLevel(nextHint);
           }}
         >
-          {busy === 'hint' ? <Loader2 size={14} className="animate-spin" /> : <Lightbulb size={14} aria-hidden />}
-          {nextHint > 3 ? 'All hints used' : `Give me a hint (${nextHint}/3)`}
+          {busy === 'hint' ? <Spinner /> : <Lightbulb size={14} aria-hidden />}
+          <span className="flex-1 text-left">{nextHint > 3 ? 'All hints used' : 'Give me a hint'}</span>
+          <span className="sr-only">({hintLevel} of 3 used)</span>
+          <span className="flex gap-1" aria-hidden>
+            {[1, 2, 3].map((n) => (
+              <span key={n} className={`h-1.5 w-1.5 rotate-45 ${n <= hintLevel ? 'bg-copper' : 'border border-line'}`} />
+            ))}
+          </span>
         </button>
-        <button className="btn-ghost px-3 py-2 text-sm" disabled={!!busy} onClick={() => ask('test', 'What does the test check?')}>
-          {busy === 'test' ? <Loader2 size={14} className="animate-spin" /> : <FlaskConical size={14} aria-hidden />}
+        <button className="btn-secondary justify-start" disabled={!!busy} onClick={() => ask('test', 'What does the test check?')}>
+          {busy === 'test' ? <Spinner /> : <FlaskConical size={14} aria-hidden />}
           What does the test check?
         </button>
       </div>
@@ -75,39 +79,38 @@ export function HintPanel({ finding, quest }: { finding: SafeFinding; quest: Que
         </label>
         <input
           id="mentor-q"
-          className="input py-2 text-sm"
-          placeholder="Ask a question about this weakness…"
+          className="field text-sm"
+          placeholder="Ask about this weakness…"
           maxLength={300}
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
         />
-        <button className="btn-ghost px-3" disabled={!!busy || !question.trim()} aria-label="Ask">
+        <button className="btn-secondary shrink-0 px-3" disabled={!!busy || !question.trim()} aria-label="Ask the mentor">
           <Send size={14} aria-hidden />
         </button>
       </form>
 
-      {error && <p className="mt-3 text-sm text-coral">{error}</p>}
+      {error && (
+        <p className="mt-3 text-sm text-ember" role="alert">
+          {error}
+        </p>
+      )}
 
       <div className="mt-4 space-y-3" aria-live="polite">
         <AnimatePresence initial={false}>
           {entries.map((e) => (
-            <motion.div
-              key={e.id}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="rounded-xl border border-white/8 bg-obsidian/60 p-3"
-            >
+            <motion.div key={e.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="border-l-2 border-copper/50 bg-abyss/70 py-3 pl-3.5 pr-3">
               <div className="mb-1.5 flex items-center justify-between gap-2">
-                <span className="label">{e.label}</span>
+                <span className="text-xs font-semibold text-copper-hi">{e.label}</span>
                 <SourceBadge source={e.source} model={e.model} />
               </div>
-              <p className="whitespace-pre-line text-sm leading-relaxed text-sand/90">{e.text}</p>
+              <p className="whitespace-pre-line text-sm leading-relaxed text-ink">{e.text}</p>
             </motion.div>
           ))}
         </AnimatePresence>
         {entries.length === 0 && (
-          <p className="text-sm text-mist">
-            Hints are progressive: the first only points where to look. The mentor teaches. It never decides whether a fix counts.
+          <p className="text-sm text-ink-3">
+            Hints are progressive: the first only points where to look. The mentor teaches, but it never decides whether a fix counts.
           </p>
         )}
       </div>
