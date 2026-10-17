@@ -1,0 +1,10 @@
+node_modules
+dist
+.netlify
+.env
+.env.*
+!.env.example
+strix_runs/
+worker/__pycache__/
+*.pyc
+.DS_Store

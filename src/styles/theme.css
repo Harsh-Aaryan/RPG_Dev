@@ -1,0 +1,76 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-obsidian: #10131f;
+  --color-obsidian-2: #161a2a;
+  --color-slate: #232941;
+  --color-slate-2: #2f3654;
+  --color-violet: #9c78ff;
+  --color-cyan: #49dbf2;
+  --color-emerald: #61e6ac;
+  --color-coral: #ff6c79;
+  --color-amber: #ffb35c;
+  --color-sand: #f0e6d2;
+  --color-mist: #a9aec8;
+  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(1200px 600px at 50% -10%, rgb(156 120 255 / 0.18), transparent 60%),
+    radial-gradient(800px 400px at 100% 100%, rgb(73 219 242 / 0.08), transparent 60%),
+    var(--color-obsidian);
+  background-attachment: fixed;
+  color: var(--color-sand);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+@utility panel {
+  @apply rounded-2xl border border-white/8 bg-slate/70 backdrop-blur-md shadow-[0_8px_30px_rgb(0_0_0/0.35)];
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-display font-semibold tracking-wide transition
+    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-violet text-obsidian hover:bg-[#b49aff] shadow-[0_0_24px_rgb(156_120_255/0.45)];
+}
+@utility btn-ghost {
+  @apply btn border border-white/12 bg-white/5 text-sand hover:bg-white/10;
+}
+@utility btn-danger {
+  @apply btn border border-coral/40 bg-coral/10 text-coral hover:bg-coral/20;
+}
+@utility chip {
+  @apply inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium;
+}
+@utility label {
+  @apply font-display text-xs font-semibold uppercase tracking-[0.18em] text-mist;
+}
+@utility input {
+  @apply w-full rounded-xl border border-white/12 bg-obsidian/70 px-3 py-2.5 text-sand placeholder:text-mist/60
+    focus:border-cyan focus:outline-none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

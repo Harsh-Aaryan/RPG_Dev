@@ -1,0 +1,2 @@
+# Standard library only. Real Strix is installed separately:
+#   curl -sSL https://strix.ai/install | bash   (review the installer first)

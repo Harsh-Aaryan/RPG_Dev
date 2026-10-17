@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - name: Simulated scan reproduces the fixture findings
+        run: |
+          FAST=1 ./worker/run_scan.sh
+          test "$(python3 -c "import json;print(len(json.load(open('fixtures/demo-findings.json'))['findings']))")" = 4
+          ! grep -Ei 'hunter2|ghp_|10\.0\.4|"poc"' fixtures/demo-findings.json
+      - name: Demo repo is still vulnerable (security tests must fail)
+        run: |
+          cd demo-vulnerable-repo
+          if npm test; then echo "demo repo unexpectedly passes"; exit 1; fi
+      - run: npm run build

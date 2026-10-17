@@ -1,0 +1,83 @@
+{
+  "label": "simulated",
+  "scan": {
+    "id": "scan_c7e212c510",
+    "repositoryId": "demo-vulnerable-repo",
+    "runName": "reporaid_20261016-185458",
+    "commitSha": "f1448db8e12889e300efd710077f10c9182c8ff9",
+    "source": "mock_strix.py",
+    "scanMode": "quick",
+    "complete": true,
+    "finishedAt": "2026-10-16T23:54:58.747747+00:00"
+  },
+  "findings": [
+    {
+      "id": "f_1a0e418ad9f51c49",
+      "sourceId": "vuln-0001",
+      "ruleId": "rr-sqli",
+      "repositoryId": "demo-vulnerable-repo",
+      "scanId": "scan_c7e212c510",
+      "title": "SQL injection in user lookup",
+      "severity": "critical",
+      "cwe": "CWE-89",
+      "safeSummary": "The `name` request parameter is concatenated directly into a SQL statement in findUser(), allowing an attacker to alter query logic.",
+      "remediationSummary": "Use parameterized queries (placeholders + bound parameter array) and add a regression test that asserts user input never appears in SQL text.",
+      "affectedPath": "src/handlers.js",
+      "affectedFunction": "findUser",
+      "line": 7,
+      "status": "approved",
+      "codeExcerpt": "function findUser(db, name) {\n  return db.query(\"SELECT id, name FROM users WHERE name = '\" + name + \"'\");\n}"
+    },
+    {
+      "id": "f_eb5302e27df6ca9d",
+      "sourceId": "vuln-0002",
+      "ruleId": "rr-path",
+      "repositoryId": "demo-vulnerable-repo",
+      "scanId": "scan_c7e212c510",
+      "title": "Path traversal in file download",
+      "severity": "high",
+      "cwe": "CWE-22",
+      "safeSummary": "downloadFile() joins a user-controlled file name onto the download directory without checking the resolved path stays inside it.",
+      "remediationSummary": "Resolve the final path and refuse anything that does not start with the download directory (or reduce input to path.basename).",
+      "affectedPath": "src/handlers.js",
+      "affectedFunction": "downloadFile",
+      "line": 12,
+      "status": "approved",
+      "codeExcerpt": "function downloadFile(fileName) {\n  const target = path.join(FILES_DIR, fileName);\n  return fs.readFileSync(target, 'utf8');\n}"
+    },
+    {
+      "id": "f_d65bd57e71a06782",
+      "sourceId": "vuln-0003",
+      "ruleId": "rr-xss",
+      "repositoryId": "demo-vulnerable-repo",
+      "scanId": "scan_c7e212c510",
+      "title": "Reflected XSS in search results",
+      "severity": "medium",
+      "cwe": "CWE-79",
+      "safeSummary": "renderSearch() reflects the search term into HTML without encoding.",
+      "remediationSummary": "HTML-escape untrusted values before inserting them into markup.",
+      "affectedPath": "src/handlers.js",
+      "affectedFunction": "renderSearch",
+      "line": 18,
+      "status": "approved",
+      "codeExcerpt": "function renderSearch(q) {\n  return `<h1>Results for ${q}</h1>`;\n}"
+    },
+    {
+      "id": "f_a6ef8838ddcbbec0",
+      "sourceId": "vuln-0004",
+      "ruleId": "rr-errleak",
+      "repositoryId": "demo-vulnerable-repo",
+      "scanId": "scan_c7e212c510",
+      "title": "Stack traces exposed in error responses",
+      "severity": "low",
+      "cwe": "CWE-209",
+      "safeSummary": "handleError() returns the raw error message and stack trace to clients.",
+      "remediationSummary": "Log details server-side and return a generic error message.",
+      "affectedPath": "src/handlers.js",
+      "affectedFunction": "handleError",
+      "line": 23,
+      "status": "approved",
+      "codeExcerpt": "function handleError(err) {\n  return { status: 500, body: { error: err.message, stack: err.stack } };\n}"
+    }
+  ]
+}
