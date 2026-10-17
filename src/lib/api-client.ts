@@ -16,27 +16,47 @@ export function setHostToken(token: string) {
   hostToken = token;
 }
 
-class ApiUnavailable extends Error {}
+export class ApiUnavailable extends Error {}
 
-async function post<T>(path: string, body: unknown): Promise<T> {
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
+/** JSON request to a Netlify Function. Throws ApiUnavailable when there is no API to talk to. */
+export async function request<T>(path: string, init: { method?: 'GET' | 'POST'; body?: unknown; headers?: Record<string, string> } = {}): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`/api/${path}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', ...(hostToken ? { 'x-host-token': hostToken } : {}) },
-      body: JSON.stringify(body),
+      method: init.method ?? 'POST',
+      headers: {
+        ...(init.body !== undefined ? { 'content-type': 'application/json' } : {}),
+        ...(hostToken ? { 'x-host-token': hostToken } : {}),
+        ...init.headers,
+      },
+      body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
     });
   } catch {
     throw new ApiUnavailable('network');
   }
   const type = res.headers.get('content-type') ?? '';
-  if (res.status === 404 || !type.includes('application/json')) throw new ApiUnavailable(String(res.status));
+  if (!type.includes('application/json')) throw new ApiUnavailable(String(res.status));
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? `Request failed (${res.status})`);
+  if (!res.ok) {
+    // A function that doesn't exist (e.g. `vite preview`) still counts as offline.
+    if (res.status === 404 && !data?.error) throw new ApiUnavailable('404');
+    throw new ApiError(data.error ?? `Request failed (${res.status})`, res.status);
+  }
   return data as T;
 }
 
-export type GeneratedQuest = { source: QuestSource; model?: string; reason?: string; quest: QuestContent };
+const post = <T,>(path: string, body: unknown, headers?: Record<string, string>) => request<T>(path, { body, headers });
+
+export type GeneratedQuest = { source: QuestSource; model?: string; reason?: string; quest: QuestContent; signature?: string };
 
 export async function generateQuest(finding: SafeFinding): Promise<GeneratedQuest> {
   try {
@@ -79,19 +99,19 @@ export async function askMentor(args: {
   }
 }
 
-export async function verifyFix(args: {
-  battleId: string;
-  questId: string;
-  findingId: string;
-  ruleId: string;
-  code: string;
-}): Promise<VerifyResponse & { offline?: boolean }> {
+export type VerifyResult = VerifyResponse & { offline?: boolean; alreadyVerified?: boolean; hit?: { applied: boolean; eventId?: string } };
+
+export async function verifyFix(
+  args: { battleId: string; questId: string; findingId: string; ruleId: string; code: string },
+  /** Participant headers for a shared battle: the server then lands the hit itself. */
+  participant?: Record<string, string>,
+): Promise<VerifyResult> {
   try {
     const { ruleId: _ruleId, ...body } = args;
     void _ruleId; // the server derives the rule from findingId
-    return await post<VerifyResponse>('verify-fix', body);
+    return await post<VerifyResult>('verify-fix', body, participant);
   } catch (err) {
-    if (!(err instanceof ApiUnavailable)) throw err;
+    if (!(err instanceof ApiUnavailable) || participant) throw err;
     // Offline demo fallback: same deterministic checks, but the receipt is unsigned and labelled.
     const tests = runRegressionChecks(args.ruleId, args.code);
     const passed = tests.every((t) => t.passed);
@@ -128,9 +148,9 @@ export async function previewGithubIssue(finding: SafeFinding, quest: QuestConte
   }
 }
 
-export async function createGithubIssue(finding: SafeFinding, quest: QuestContent): Promise<IssueResult> {
+export async function createGithubIssue(finding: SafeFinding, quest: QuestContent, shared?: { battleId: string; questId: string }): Promise<IssueResult> {
   try {
-    return await post<IssueResult>('create-github-issue', { findingId: finding.id, quest });
+    return await post<IssueResult>('create-github-issue', { findingId: finding.id, quest, ...shared });
   } catch (err) {
     if (!(err instanceof ApiUnavailable)) throw err;
     const { title, body } = buildIssue(finding, quest);

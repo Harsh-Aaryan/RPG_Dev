@@ -32,6 +32,8 @@ type State = {
   applyVerifiedHit: (battleId: string, questId: string, receipt: VerificationReceipt) => BattleEvent | null;
   reopenQuest: (battleId: string, questId: string) => void;
   deleteBattle: (battleId: string) => void;
+  /** Replace a shared battle with the server's latest state. */
+  upsertBattle: (battle: Battle) => void;
 };
 
 function event(type: BattleEventType, text: string, extra: Partial<BattleEvent> = {}): BattleEvent {
@@ -190,6 +192,8 @@ export const useBattleStore = create<State>()(
             b.defeatedAt = undefined;
             b.events.push(event('reopen', `Fix for “${q.content.questTitle}” was invalidated; +${q.damage} HP restored`, { questId }));
           }),
+
+        upsertBattle: (battle) => set((s) => ({ battles: { ...s.battles, [battle.id]: battle } })),
 
         deleteBattle: (battleId) =>
           set((s) => {
