@@ -246,14 +246,22 @@ export function LowPolyBoss({ severity, form, scale, hpRatio, hitKey, defeated, 
         <group position={parts.headPos} quaternion={parts.headQuat} scale={1.4}>
           <group ref={head}>
             <mesh geometry={headParts.skull} castShadow>
-              <meshStandardMaterial vertexColors flatShading roughness={0.75} metalness={0.1} />
+              <meshStandardMaterial
+                vertexColors
+                flatShading
+                roughness={0.75}
+                metalness={0.1}
+                transparent={build.ghost}
+                opacity={build.ghost ? 0.85 : 1}
+                emissive={build.ghost ? '#22332c' : '#000000'}
+              />
             </mesh>
             <mesh geometry={headParts.bone} castShadow>
               <meshStandardMaterial vertexColors flatShading roughness={0.6} />
             </mesh>
             <group ref={jaw} position={[0, -0.13, 0.04]}>
               <mesh geometry={headParts.jaw} castShadow>
-                <meshStandardMaterial vertexColors flatShading roughness={0.75} />
+                <meshStandardMaterial vertexColors flatShading roughness={0.75} transparent={build.ghost} opacity={build.ghost ? 0.85 : 1} />
               </mesh>
             </group>
             <mesh geometry={headParts.eyes}>
