@@ -190,7 +190,7 @@ export function Boss2D({ severity, form, hpRatio, defeated, reducedMotion, class
       )}
 
       {/* body */}
-      <g opacity={defeated ? 0.35 : 1}>
+      <g opacity={defeated ? 0 : 1}>
         {body.segs.map((s, i) => (
           <g key={i}>
             {s.spine && <polygon points={pts(s.spine)} fill="#6e5236" />}
@@ -216,7 +216,7 @@ export function Boss2D({ severity, form, hpRatio, defeated, reducedMotion, class
       )}
 
       {/* head */}
-      <g transform="translate(206 80)" opacity={defeated ? 0.35 : 1}>
+      <g transform="translate(206 80)" opacity={defeated ? 0 : 1}>
         <polygon points="8,-16 46,-46 26,-12" fill="#c9bb9c" />
         <polygon points="8,-16 46,-46 30,-20" fill="#a99a7d" />
         <polygon points="14,-8 54,-24 24,-2" fill="#b3a587" />
@@ -248,9 +248,9 @@ export function Boss2D({ severity, form, hpRatio, defeated, reducedMotion, class
 
       {/* shards when defeated */}
       {defeated &&
-        Array.from({ length: 14 }, (_, i) => {
-          const x = 110 + ((i * 71) % 190);
-          const y = 236 + ((i * 29) % 26);
+        Array.from({ length: 26 }, (_, i) => {
+          const x = 96 + ((i * 71) % 210);
+          const y = 228 + ((i * 29) % 34);
           return <polygon key={i} points={`${x},${y} ${x + 7},${y - 5} ${x + 4},${y + 4}`} fill={i % 3 ? '#2b352e' : '#8e643f'} />;
         })}
     </svg>

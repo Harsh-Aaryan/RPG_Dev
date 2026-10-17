@@ -19,18 +19,29 @@ export function EmptyDais({ className = '' }: { className?: string }) {
 
 /** Victory crest: a shield struck by crossed blades, ringed by a laurel. */
 export function VictoryCrest({ className = '' }: { className?: string }) {
-  const leaves = Array.from({ length: 7 }, (_, i) => i);
+  // Leaves run up each side of the shield along an arc, long axis on the tangent.
+  const leaves = Array.from({ length: 8 }, (_, i) => {
+    const deg = 112 + i * 16;
+    const a = (deg * Math.PI) / 180;
+    const r = 45 + (i % 2 ? 3 : -2);
+    return { x: 60 + Math.cos(a) * r, y: 64 + Math.sin(a) * r, rot: deg + (i % 2 ? 22 : -22), scale: 1 - i * 0.05 };
+  });
   return (
     <svg viewBox="0 0 120 120" className={className} role="img" aria-label="Victory crest" focusable="false">
-      {[-1, 1].map((s) => (
-        <g key={s} transform={`translate(60 62) scale(${s} 1)`}>
-          {leaves.map((i) => {
-            const a = (-90 + 18 + i * 24) * (Math.PI / 180);
-            const x = Math.cos(a) * 44;
-            const y = Math.sin(a) * 44;
-            const rot = (a * 180) / Math.PI + 90;
-            return <ellipse key={i} cx={-Math.abs(x)} cy={y} rx="4" ry="9" transform={`rotate(${-rot} ${-Math.abs(x)} ${y})`} fill="#82a58a" opacity={0.55 + i * 0.05} />;
-          })}
+      {[1, -1].map((s) => (
+        <g key={s} transform={s === -1 ? 'translate(120 0) scale(-1 1)' : undefined}>
+          <path d="M43 104C26 96 15 81 15 62" fill="none" stroke="#5e7f64" strokeWidth="1.4" />
+          {leaves.map((l, i) => (
+            <ellipse
+              key={i}
+              cx={l.x}
+              cy={l.y}
+              rx={2.6 * l.scale}
+              ry={7 * l.scale}
+              transform={`rotate(${l.rot} ${l.x} ${l.y})`}
+              fill={i % 2 ? '#82a58a' : '#6d8f75'}
+            />
+          ))}
         </g>
       ))}
       {/* crossed blades */}
