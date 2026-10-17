@@ -1,6 +1,6 @@
 import { buildIssue, templateQuest, type IssuePreview } from '../../shared/quest';
 import { codeHash, RULES, runRegressionChecks } from '../../shared/verifier';
-import type { MentorMode, QuestContent, QuestSource, SafeFinding, VerifyResponse } from './types';
+import type { MentorMode, QuestContent, QuestSource, SafeFinding, VerificationReceipt, VerifyResponse } from './types';
 
 /**
  * Thin client for the Netlify Functions. Every call has an offline fallback so
@@ -155,5 +155,25 @@ export async function createGithubIssue(finding: SafeFinding, quest: QuestConten
     if (!(err instanceof ApiUnavailable)) throw err;
     const { title, body } = buildIssue(finding, quest);
     return { mock: true, reason: 'API offline', title, body };
+  }
+}
+
+export type PrVerdict = {
+  outcome: 'verified' | 'pending' | 'rejected' | 'tampered' | 'wrong_repo';
+  detail: string;
+  check?: { name: string; url: string | null };
+};
+export type PrResult = { verdict: PrVerdict; receipt?: VerificationReceipt; alreadyVerified?: boolean; hit?: { applied: boolean; eventId?: string } };
+
+/** Host-only: verify a quest from a real pull request's GitHub Actions check. */
+export async function verifyPullRequest(
+  args: { battleId: string; questId: string; findingId: string; prNumber: number },
+  participant?: Record<string, string>,
+): Promise<PrResult> {
+  try {
+    return await request<PrResult>('verify-pr', { body: args, headers: participant });
+  } catch (err) {
+    if (err instanceof ApiUnavailable) throw new Error('Pull request verification needs the RepoRaid API.');
+    throw err;
   }
 }

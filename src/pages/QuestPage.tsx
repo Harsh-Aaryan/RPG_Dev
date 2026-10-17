@@ -6,12 +6,14 @@ import { RULES } from '../../shared/verifier';
 import { Emblem } from '../components/art/Emblem';
 import { Seal, SwordGlyph } from '../components/art/Sigils';
 import { HintPanel } from '../components/mentor/HintPanel';
+import { PrPanel } from '../components/quest/PrPanel';
 import { SeverityBadge, SourceBadge } from '../components/ui/Badges';
 import { Shell } from '../components/ui/Shell';
 import { Spinner } from '../components/ui/Spinner';
 import { useBattleActions } from '../hooks/useBattleActions';
 import { useBattleSync, useMe } from '../hooks/useBattleSync';
 import { previewGithubIssue, type IssuePreview } from '../lib/api-client';
+import { describeReceipt } from '../lib/format';
 import { SEVERITY_STYLE } from '../lib/game-rules';
 import type { TestResult } from '../lib/types';
 import { myRole, useBattleStore } from '../store/useBattleStore';
@@ -277,7 +279,7 @@ export function QuestPage() {
                 <div className="min-w-0">
                   <p className="font-display text-xl font-semibold text-ink">Verified fix: −{quest.damage} HP dealt</p>
                   <p className="mt-1 break-all font-mono text-[0.7rem] text-ink-3">
-                    {quest.receipt.verifier} · code {quest.receipt.codeHash} · sig {quest.receipt.signature.slice(0, 16)}… ·{' '}
+                    {describeReceipt(quest.receipt)} · sig {quest.receipt.signature.slice(0, 12)}… ·{' '}
                     {new Date(quest.receipt.verifiedAt).toLocaleString()}
                   </p>
                 </div>
@@ -353,6 +355,17 @@ export function QuestPage() {
             )}
             <p className="mt-4 border-t border-line-soft pt-3 text-xs text-ink-3">Closing the issue alone never damages the boss.</p>
           </section>
+
+          <PrPanel
+            ruleId={finding.ruleId}
+            isHost={isHost}
+            verified={verified}
+            onVerify={async (prNumber) => {
+              const out = await actions.verifyPr(questId, finding, prNumber);
+              if (out.hitEventId) setTimeout(() => navigate(`/battle/${battleId}`, { state: { strike: out.hitEventId } }), 1400);
+              return out;
+            }}
+          />
         </div>
       </div>
     </Shell>

@@ -55,8 +55,10 @@ export type VerificationReceipt = {
   findingId: string;
   codeHash: string;
   verifiedAt: string;
-  verifier: 'server' | 'local-offline';
+  verifier: 'server' | 'local-offline' | 'github-actions';
   signature: string;
+  /** Pull request whose quest check proved the fix (github-actions receipts). */
+  prNumber?: number;
 };
 
 export type TestResult = { name: string; passed: boolean; detail: string };

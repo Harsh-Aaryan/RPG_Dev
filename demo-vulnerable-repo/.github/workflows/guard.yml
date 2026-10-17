@@ -1,0 +1,26 @@
+# Defense in depth: a quest PR may only change application code. RepoRaid's
+# verifier rejects these PRs independently.
+name: guard
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  protected-paths:
+    name: guard-protected-paths
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Refuse changes to tests and workflows
+        run: |
+          changed=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
+          echo "$changed"
+          if echo "$changed" | grep -E '^(test/|\.github/)'; then
+            echo "::error::Quest PRs may not modify test/ or .github/"
+            exit 1
+          fi

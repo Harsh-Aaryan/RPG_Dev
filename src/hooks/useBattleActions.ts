@@ -1,4 +1,4 @@
-import { createGithubIssue, verifyFix } from '../lib/api-client';
+import { createGithubIssue, verifyFix, verifyPullRequest } from '../lib/api-client';
 import { participantHeaders } from '../lib/identity';
 import { claimSharedQuest, joinSharedBattle, reopenSharedQuest } from '../lib/remote';
 import type { QuestContent, SafeFinding } from '../lib/types';
@@ -61,6 +61,20 @@ export function useBattleActions(battle: Battle | undefined, refresh: () => Prom
       const res = await verifyFix(args);
       store.recordAttempt(battle.id, questId, res.passed);
       const hit = res.passed && res.receipt ? store.applyVerifiedHit(battle.id, questId, res.receipt) : null;
+      return { res, hitEventId: hit?.id };
+    },
+
+    /** Host: check a pull request's GitHub Actions quest check. Lands the hit when it passed. */
+    async verifyPr(questId: string, finding: SafeFinding, prNumber: number) {
+      if (!battle) throw new Error('No battle');
+      const args = { battleId: battle.id, questId, findingId: finding.id, prNumber };
+      if (shared) {
+        const res = await verifyPullRequest(args, participantHeaders(battle.id));
+        await refresh();
+        return { res, hitEventId: res.hit?.applied ? res.hit.eventId : undefined };
+      }
+      const res = await verifyPullRequest(args);
+      const hit = res.receipt ? store.applyVerifiedHit(battle.id, questId, res.receipt) : null;
       return { res, hitEventId: hit?.id };
     },
   };

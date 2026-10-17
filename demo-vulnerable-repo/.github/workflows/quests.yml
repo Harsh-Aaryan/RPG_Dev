@@ -1,0 +1,31 @@
+# One check run per RepoRaid quest. RepoRaid's verify-pr function trusts only
+# these checks (named quest-<rule>, created by GitHub Actions) on a PR's head.
+name: quests
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quest:
+    name: quest-${{ matrix.rule }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rule: [rr-sqli, rr-path, rr-xss, rr-errleak]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # A PR must not be able to weaken its own test: always run the tests
+      # from the base branch against the PR's code.
+      - name: Use the base branch's security tests
+        run: git checkout ${{ github.event.pull_request.base.sha }} -- test/
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run the ${{ matrix.rule }} regression test
+        run: node --test --test-name-pattern "^${{ matrix.rule }}:" test/security.test.js

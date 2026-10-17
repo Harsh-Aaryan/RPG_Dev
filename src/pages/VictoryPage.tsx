@@ -12,6 +12,7 @@ import { ScanLabel, SeverityBadge } from '../components/ui/Badges';
 import { Shell } from '../components/ui/Shell';
 import { Spinner } from '../components/ui/Spinner';
 import { useBattleSync, useMe } from '../hooks/useBattleSync';
+import { describeReceipt } from '../lib/format';
 import { bossSizeScale, bossVariant, highestSeverity } from '../lib/game-rules';
 import { battleStats, useBattleStore } from '../store/useBattleStore';
 
@@ -142,7 +143,7 @@ export function VictoryPage() {
                       <p className="mt-1.5 text-sm text-ink-2">{f.remediationSummary}</p>
                       <p className="mt-1.5 font-mono text-[0.7rem] text-ink-3">
                         {done && q.receipt
-                          ? `verified by ${q.receipt.verifier} verifier · code ${q.receipt.codeHash}${by ? ` · ${by}` : ''}`
+                          ? `verified by ${describeReceipt(q.receipt)}${by ? ` · ${by}` : ''}`
                           : 'unresolved'}
                       </p>
                     </div>
