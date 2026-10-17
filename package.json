@@ -11,7 +11,12 @@
     "typecheck": "tsc -b",
     "scan:mock": "FAST=1 ./worker/run_scan.sh",
     "verify:fix": "python3 worker/verify_fix.py",
-    "db:dev": "node scripts/dev-db.mjs"
+    "db:dev": "node scripts/dev-db.mjs",
+    "check": "tsc -b && vitest run",
+    "db:migrate": "node --env-file-if-exists=.env scripts/db-migrate.mjs",
+    "db:smoke": "node --env-file-if-exists=.env scripts/db-smoke.mjs",
+    "db:rls": "node --env-file-if-exists=.env scripts/check-rls.mjs",
+    "check:bundle": "node --env-file-if-exists=.env scripts/check-bundle-secrets.mjs"
   },
   "dependencies": {
     "@fontsource-variable/ibm-plex-sans": "^5.3.0",
