@@ -1,6 +1,6 @@
 import { ArrowLeft, Check, ExternalLink, FlaskConical, GitPullRequest, ScrollText, Wand2, X } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { RULES } from '../../shared/verifier';
 import { Emblem } from '../components/art/Emblem';
@@ -9,7 +9,9 @@ import { HintPanel } from '../components/mentor/HintPanel';
 import { SeverityBadge, SourceBadge } from '../components/ui/Badges';
 import { Shell } from '../components/ui/Shell';
 import { Spinner } from '../components/ui/Spinner';
-import { createGithubIssue, previewGithubIssue, verifyFix, type IssuePreview } from '../lib/api-client';
+import { useBattleActions } from '../hooks/useBattleActions';
+import { useBattleSync, useMe } from '../hooks/useBattleSync';
+import { previewGithubIssue, type IssuePreview } from '../lib/api-client';
 import { SEVERITY_STYLE } from '../lib/game-rules';
 import type { TestResult } from '../lib/types';
 import { myRole, useBattleStore } from '../store/useBattleStore';
@@ -18,8 +20,9 @@ export function QuestPage() {
   const { battleId = '', questId = '' } = useParams();
   const navigate = useNavigate();
   const battle = useBattleStore((s) => s.battles[battleId]);
-  const me = useBattleStore((s) => s.me);
-  const { claimQuest, attachIssue, recordAttempt, applyVerifiedHit } = useBattleStore.getState();
+  const sync = useBattleSync(battleId);
+  const me = useMe(battle);
+  const actions = useBattleActions(battle, sync.refresh);
 
   const quest = battle?.quests.find((q) => q.id === questId);
   const finding = battle?.findings.find((f) => f.id === quest?.findingId);
@@ -29,6 +32,24 @@ export function QuestPage() {
   const [busy, setBusy] = useState<'verify' | 'issue' | 'preview' | null>(null);
   const [preview, setPreview] = useState<(IssuePreview & { offline?: boolean }) | null>(null);
   const [error, setError] = useState('');
+
+  // Shared battles arrive after the first render; start the forge from the vulnerable excerpt once they do.
+  useEffect(() => {
+    if (finding?.codeExcerpt) setCode((c) => c || finding.codeExcerpt!);
+  }, [finding?.id, finding?.codeExcerpt]);
+
+  if (!battle && sync.phase === 'loading') {
+    return (
+      <Shell>
+        <div className="mx-auto mt-24 flex max-w-sm flex-col items-center text-center" role="status">
+          <span className="text-copper">
+            <Spinner size={28} />
+          </span>
+          <p className="mt-4 font-display text-2xl font-semibold text-ink">Fetching the quest…</p>
+        </div>
+      </Shell>
+    );
+  }
 
   if (!battle || !quest || !finding) {
     return (
@@ -51,19 +72,17 @@ export function QuestPage() {
   const sev = SEVERITY_STYLE[finding.severity];
   const claimedByMe = quest.claimedBy === me;
   const claimer = battle.participants.find((p) => p.id === quest.claimedBy)?.nickname;
+  // In a shared battle only party members can act; spectators are sent to the arena to join.
+  const canAct = !battle.remote || battle.participants.some((p) => p.id === me);
 
   async function runVerify() {
     setBusy('verify');
     setError('');
     try {
-      const res = await verifyFix({ battleId, questId, findingId: finding!.id, ruleId: finding!.ruleId, code });
+      const { res, hitEventId } = await actions.verify(questId, finding!, code);
       setTests(res.tests);
       setOffline(!!res.offline);
-      recordAttempt(battleId, questId, res.passed);
-      if (res.passed && res.receipt) {
-        const hit = applyVerifiedHit(battleId, questId, res.receipt);
-        if (hit) setTimeout(() => navigate(`/battle/${battleId}`, { state: { strike: hit.id } }), 1200);
-      }
+      if (hitEventId) setTimeout(() => navigate(`/battle/${battleId}`, { state: { strike: hitEventId } }), 1200);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verification failed to run');
     } finally {
@@ -87,7 +106,7 @@ export function QuestPage() {
     setBusy('issue');
     setError('');
     try {
-      attachIssue(battleId, questId, await createGithubIssue(finding!, quest!.content));
+      await actions.publishIssue(questId, finding!, quest!.content);
       setPreview(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create issue');
@@ -150,14 +169,27 @@ export function QuestPage() {
               </ul>
             </div>
 
+            {!verified && !canAct && (
+              <p className="mt-6 text-sm text-ink-2">
+                You're watching this raid.{' '}
+                <Link to={`/battle/${battleId}`} className="font-semibold text-copper-hi underline-offset-2 hover:underline">
+                  Join the party in the arena
+                </Link>{' '}
+                to accept quests and run tests.
+              </p>
+            )}
             {!verified &&
+              canAct &&
               (claimedByMe ? (
                 <p className="mt-6 inline-flex items-center gap-2 text-sm text-copper">
                   <Check size={15} aria-hidden /> You've accepted this quest. Forge a fix below.
                 </p>
               ) : (
                 <div className="mt-6 flex flex-wrap items-center gap-3">
-                  <button className="btn-primary min-h-11 px-5" onClick={() => claimQuest(battleId, questId)}>
+                  <button
+                    className="btn-primary min-h-11 px-5"
+                    onClick={() => actions.claim(questId).catch((err) => setError(err instanceof Error ? err.message : 'Could not accept the quest'))}
+                  >
                     <ScrollText size={16} aria-hidden /> Accept quest
                   </button>
                   {claimer && <span className="text-sm text-ink-3">{claimer} has accepted it. Accepting moves the claim to you.</span>}
@@ -202,7 +234,7 @@ export function QuestPage() {
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-4">
-              <button className="btn-primary min-h-11 px-5" onClick={runVerify} disabled={busy !== null || verified || !code.trim()}>
+              <button className="btn-primary min-h-11 px-5" onClick={runVerify} disabled={busy !== null || verified || !code.trim() || !canAct}>
                 {busy === 'verify' ? <Spinner size={16} /> : <FlaskConical size={16} aria-hidden />}
                 {busy === 'verify' ? 'Running the test…' : 'Run regression test'}
               </button>

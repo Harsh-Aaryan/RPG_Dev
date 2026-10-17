@@ -86,7 +86,11 @@ export function BattlePage() {
     setPending((p) => [...p, ...fresh.map((e) => ({ id: e.id, damage: e.damage ?? 0 }))]);
   }, [battle, sync.synced, strikeId, navigate]);
 
-  if (!battle) return sync.phase === 'loading' ? <LoadingBattle /> : <MissingBattle battleId={battleId} />;
+  if (!battle) {
+    if (sync.phase === 'loading') return <LoadingBattle />;
+    if (sync.phase === 'error') return <UnreachableBattle onRetry={() => void sync.refresh()} />;
+    return <MissingBattle battleId={battleId} shared={sync.shared} />;
+  }
 
   const { hp, maxHP } = battleStats(battle);
   const unresolved = battle.findings.filter((f) => battle.quests.find((q) => q.findingId === f.id)?.status !== 'verified');
@@ -348,7 +352,27 @@ function JoinModal({ shared, onJoin }: { shared: boolean; onJoin: (nickname: str
   );
 }
 
-function MissingBattle({ battleId }: { battleId: string }) {
+function UnreachableBattle({ onRetry }: { onRetry: () => void }) {
+  return (
+    <Shell>
+      <div className="frame mx-auto mt-16 max-w-lg p-7 text-center" role="alert">
+        <Emblem size={40} className="mx-auto" />
+        <h1 className="mt-4 font-display text-3xl font-bold text-ink">The arena didn't answer</h1>
+        <p className="mt-3 text-sm text-ink-2">The server couldn't load this battle just now. Check your connection and try again.</p>
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <button className="btn-primary" onClick={onRetry}>
+            Try again
+          </button>
+          <Link to="/" className="btn-secondary">
+            Back to raids
+          </Link>
+        </div>
+      </div>
+    </Shell>
+  );
+}
+
+function MissingBattle({ battleId, shared }: { battleId: string; shared: boolean }) {
   const createBattle = useBattleStore((s) => s.createBattle);
   const quests = useMemo(
     () => Object.fromEntries(demoFixture.findings.map((f) => [f.id, { source: 'template' as const, quest: templateQuest(f) }])),
@@ -359,19 +383,28 @@ function MissingBattle({ battleId }: { battleId: string }) {
       <div className="frame mx-auto mt-16 max-w-lg p-7 text-center">
         <Emblem size={40} className="mx-auto" />
         <h1 className="mt-4 font-display text-3xl font-bold text-ink">
-          Battle <span className="font-mono text-2xl tracking-wider">{battleId}</span> isn't on this device
+          {shared ? 'No battle with code ' : 'Battle '}
+          <span className="font-mono text-2xl tracking-wider">{battleId}</span>
+          {shared ? '' : " isn't on this device"}
         </h1>
         <p className="mt-3 text-sm text-ink-2">
-          In this MVP, battle state lives on the host's device (shared realtime needs Supabase). You can join a fresh copy of the
-          demo battle with the same code.
+          {shared
+            ? 'Check the code with your host, or start a battle of your own.'
+            : "Battles on this deployment live on the host's device. You can join a fresh copy of the demo battle with the same code."}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <button
-            className="btn-primary"
-            onClick={() => createBattle({ id: battleId, name: `Raid ${battleId}`, fixture: demoFixture, quests, asHost: false })}
-          >
-            Join the demo copy
-          </button>
+          {shared ? (
+            <Link to="/create" className="btn-primary">
+              Start a battle
+            </Link>
+          ) : (
+            <button
+              className="btn-primary"
+              onClick={() => createBattle({ id: battleId, name: `Raid ${battleId}`, fixture: demoFixture, quests, asHost: false })}
+            >
+              Join the demo copy
+            </button>
+          )}
           <Link to="/" className="btn-secondary">
             Back to raids
           </Link>

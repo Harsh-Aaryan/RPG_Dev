@@ -6,8 +6,10 @@ import { useBattleStore, type Battle } from '../store/useBattleStore';
 
 export type Connection = 'device' | 'realtime' | 'polling' | 'offline';
 export type SyncState = {
-  /** local: lives on this device; ready: shared and fetched; missing: nowhere to be found. */
-  phase: 'local' | 'loading' | 'ready' | 'missing';
+  /** local: lives on this device; ready: shared and fetched; missing: nowhere to be found; error: the server failed. */
+  phase: 'local' | 'loading' | 'ready' | 'missing' | 'error';
+  /** This deployment has shared battles switched on. */
+  shared: boolean;
   connection: Connection;
   /** True once this page has the server's current state (not a cached copy). */
   synced: boolean;
@@ -28,6 +30,7 @@ export function useBattleSync(battleId: string): SyncState {
   const [phase, setPhase] = useState<SyncState['phase']>(isLocal ? 'local' : 'loading');
   const [connection, setConnection] = useState<Connection>(isLocal ? 'device' : 'polling');
   const [synced, setSynced] = useState(false);
+  const [shared, setShared] = useState(false);
   const live = useRef(false);
 
   const refresh = useCallback(async () => {
@@ -44,7 +47,7 @@ export function useBattleSync(battleId: string): SyncState {
       }
     } catch {
       setConnection('offline');
-      setPhase((p) => (p === 'loading' ? (useBattleStore.getState().battles[battleId] ? 'ready' : 'missing') : p));
+      setPhase((p) => (p === 'loading' || p === 'error' ? (useBattleStore.getState().battles[battleId] ? 'ready' : 'error') : p));
     }
   }, [battleId, isLocal, upsert]);
 
@@ -73,6 +76,7 @@ export function useBattleSync(battleId: string): SyncState {
     void (async () => {
       const cfg = await getServerConfig();
       if (disposed) return;
+      setShared(Boolean(cfg?.shared));
       if (!cfg?.shared) {
         // No shared backend: a cached copy of a shared battle can still be viewed.
         setPhase(useBattleStore.getState().battles[battleId] ? 'ready' : 'missing');
@@ -108,7 +112,7 @@ export function useBattleSync(battleId: string): SyncState {
     };
   }, [battleId, isLocal, refresh]);
 
-  return { phase, connection, synced: isLocal || synced, refresh };
+  return { phase, shared, connection, synced: isLocal || synced, refresh };
 }
 
 /** Who "I" am in this battle: the shared participant id, or this device's id for local battles. */

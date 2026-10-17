@@ -10,15 +10,31 @@ import { Seal } from '../components/art/Sigils';
 import { PartyList } from '../components/battle/PartyList';
 import { ScanLabel, SeverityBadge } from '../components/ui/Badges';
 import { Shell } from '../components/ui/Shell';
+import { Spinner } from '../components/ui/Spinner';
+import { useBattleSync, useMe } from '../hooks/useBattleSync';
 import { bossSizeScale, bossVariant, highestSeverity } from '../lib/game-rules';
 import { battleStats, useBattleStore } from '../store/useBattleStore';
 
 export function VictoryPage() {
   const { battleId = '' } = useParams();
   const battle = useBattleStore((s) => s.battles[battleId]);
-  const me = useBattleStore((s) => s.me);
+  const sync = useBattleSync(battleId);
+  const me = useMe(battle);
   const reducedMotion = useBattleStore((s) => s.reducedMotion);
   const [copied, setCopied] = useState(false);
+
+  if (!battle && sync.phase === 'loading') {
+    return (
+      <Shell>
+        <div className="mx-auto mt-24 flex max-w-sm flex-col items-center text-center" role="status">
+          <span className="text-copper">
+            <Spinner size={28} />
+          </span>
+          <p className="mt-4 font-display text-2xl font-semibold text-ink">Gathering the raid's record…</p>
+        </div>
+      </Shell>
+    );
+  }
 
   if (!battle) {
     return (
