@@ -8,3 +8,6 @@ strix_runs/
 worker/__pycache__/
 *.pyc
 .DS_Store
+.playwright-mcp/
+.agent-status/
+tsconfig.tsbuildinfo

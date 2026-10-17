@@ -13,6 +13,9 @@
     "verify:fix": "python3 worker/verify_fix.py"
   },
   "dependencies": {
+    "@fontsource-variable/ibm-plex-sans": "^5.3.0",
+    "@fontsource/grenze": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
     "@google/genai": "^2.30.0",
     "@netlify/functions": "^6.0.2",
     "@octokit/rest": "^22.0.1",
@@ -29,7 +32,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
-    "@netlify/vite-plugin": "^3.0.1",
+    "@netlify/vite-plugin": "^2.1.4",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
@@ -39,7 +42,7 @@
     "tailwindcss": "^4.3.3",
     "typescript": "~5.9",
     "vite": "^8.3.4",
-    "vitest": "^3.2.7"
+    "vitest": "^5.0.5"
   },
   "license": "MIT"
 }

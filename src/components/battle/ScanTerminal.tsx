@@ -40,7 +40,7 @@ export function ScanTerminal({ fixture, onDone, fast }: { fixture: FindingsFixtu
   return (
     <div
       ref={box}
-      className="h-64 overflow-y-auto rounded-xl border border-white/10 bg-[#0a0c14] p-3 font-mono text-[11px] leading-relaxed sm:text-xs"
+      className="well h-64 overflow-y-auto p-3.5 font-mono text-[11px] leading-relaxed sm:text-xs"
       role="log"
       aria-label="Simulated Strix scan output"
     >
@@ -48,13 +48,13 @@ export function ScanTerminal({ fixture, onDone, fast }: { fixture: FindingsFixtu
         <div
           key={i}
           className={
-            l.startsWith('$') ? 'text-cyan' : l.startsWith('✓') ? 'text-emerald' : l.includes('↳') ? 'text-amber' : 'text-mist'
+            l.startsWith('$') ? 'text-copper' : l.startsWith('✓') ? 'text-sage' : l.includes('↳') ? 'text-gold' : 'text-ink-3'
           }
         >
           {l}
         </div>
       ))}
-      {shown < lines.length && <span className="inline-block h-3.5 w-2 animate-pulse bg-mist align-middle" />}
+      {shown < lines.length && <span className="inline-block h-3.5 w-2 animate-pulse bg-ink-3 align-middle" />}
     </div>
   );
 }
